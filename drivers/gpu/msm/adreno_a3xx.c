@@ -616,7 +616,6 @@ static int a3xx_send_me_init(struct adreno_device *adreno_dev,
 		struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 
 		dev_err(device->dev, "CP initialization failed to idle\n");
-		kgsl_device_snapshot(device, NULL, false);
 	}
 
 	return ret;
@@ -1211,8 +1210,6 @@ static irqreturn_t a3xx_irq_handler(struct adreno_device *adreno_dev)
 	/* Call the helper to execute the callbacks */
 	ret = adreno_irq_callbacks(adreno_dev, a3xx_irq_funcs, status);
 
-	trace_kgsl_a3xx_irq_status(adreno_dev, status);
-
 	/* Now clear AHB_ERROR if it was set */
 	if (status & A3XX_INT_RBBM_AHB_ERROR)
 		kgsl_regwrite(device, A3XX_RBBM_INT_CLEAR_CMD,
@@ -1257,10 +1254,6 @@ const struct adreno_gpudev adreno_a3xx_gpudev = {
 	.init = a3xx_init,
 	.microcode_read = a3xx_microcode_read,
 	.start = a3xx_start,
-	.snapshot = a3xx_snapshot,
-#ifdef CONFIG_QCOM_KGSL_CORESIGHT
-	.coresight = {&a3xx_coresight},
-#endif
 #if IS_ENABLED(CONFIG_COMMON_CLK_QCOM)
 	.clk_set_options = a3xx_clk_set_options,
 #endif

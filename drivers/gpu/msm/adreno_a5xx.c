@@ -653,8 +653,6 @@ static void a5xx_spin_idle_debug(struct adreno_device *adreno_dev,
 		adreno_dev->cur_rb->id, rptr, wptr, status, status3, intstatus);
 
 	dev_err(device->dev, " hwfault=%8.8X\n", hwfault);
-
-	kgsl_device_snapshot(device, NULL, false);
 }
 
 static int _gpmu_send_init_cmds(struct adreno_device *adreno_dev)
@@ -2648,12 +2646,8 @@ static struct adreno_coresight a5xx_coresight = {
 
 const struct adreno_gpudev adreno_a5xx_gpudev = {
 	.reg_offsets = a5xx_register_offsets,
-#ifdef CONFIG_QCOM_KGSL_CORESIGHT
-	.coresight = {&a5xx_coresight},
-#endif
 	.probe = a5xx_probe,
 	.start = a5xx_start,
-	.snapshot = a5xx_snapshot,
 	.init = a5xx_init,
 	.irq_handler = a5xx_irq_handler,
 	.rb_start = a5xx_rb_start,
