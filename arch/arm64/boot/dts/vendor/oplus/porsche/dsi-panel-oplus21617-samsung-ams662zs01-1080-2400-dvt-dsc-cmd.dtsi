@@ -1652,11 +1652,6 @@
 	oplus,mdss-dsi-osc-clk-mode0-rate = <180300>;
 	oplus,mdss-dsi-osc-clk-mode1-rate = <182300>;
 	qcom,mdss-dsi-dc-backlight-level = <1100>;
-	oplus,apollo-sync-brightness-level = <711>;
-	oplus,dc_apollo_sync_enable;
-	oplus,dc-apollo-backlight-sync-level = <1100>;
-	oplus,dc-apollo-backlight-sync-level-pcc-max = <32760>;
-	oplus,dc-apollo-backlight-sync-level-pcc-min = <21600>;
 	oplus,dsi-fod-brightness = <0 255>,
 				<4 238>,
 				<256 229>,
@@ -1735,11 +1730,6 @@
 				qcom,default-topology-index = <0>;
 		};
 	};
-};
-
-&dsi_oplus21617samsung_ams662zs01_1080_2400_cmd_dvt {
-	oplus,apollo_backlight_enable;
-	//oplus,color_srgb_status;
 };
 
 &dsi_oplus21617samsung_ams662zs01_1080_2400_cmd_dvt {
