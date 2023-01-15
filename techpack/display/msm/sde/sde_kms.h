@@ -42,6 +42,7 @@
 
 #define DRMID(x) ((x) ? (x)->base.id : -1)
 
+#ifdef CONFIG_DRM_MSM_DEBUG
 /**
  * SDE_DEBUG - macro for kms/plane/crtc/encoder/connector logs
  * @fmt: Pointer to format string
@@ -59,6 +60,11 @@
  * @fmt: Pointer to format string
  */
 #define SDE_DEBUG_DRIVER(fmt, ...) pr_debug(fmt, ##__VA_ARGS__)
+#else
+#define SDE_DEBUG(fmt, ...) no_printk(fmt, ##__VA_ARGS__)
+#define SDE_INFO(fmt, ...) no_printk(fmt, ##__VA_ARGS__)
+#define SDE_DEBUG_DRIVER(fmt, ...) no_printk(fmt, ##__VA_ARGS__)
+#endif
 
 #define SDE_ERROR(fmt, ...) pr_debug("[sde error]" fmt, ##__VA_ARGS__)
 
