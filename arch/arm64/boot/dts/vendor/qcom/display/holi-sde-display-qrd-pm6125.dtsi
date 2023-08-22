@@ -16,12 +16,12 @@
 &tlmm {
 	display_panel_avdd_default: display_panel_avdd_default {
 		mux {
-			pins = "gpio24";
+			pins = "gpio6";
 			function = "gpio";
 		};
 
 		config {
-			pins = "gpio24";
+			pins = "gpio6";
 			drive-strength = <8>;
 			bias-disable = <0>;
 			output-high;
@@ -36,7 +36,7 @@
 		regulator-min-microvolt = <3000000>;
 		regulator-max-microvolt = <3000000>;
 		regulator-enable-ramp-delay = <233>;
-		gpio = <&tlmm 24 0>;
+		gpio = <&tlmm 6 0>;
 		enable-active-high;
 		regulator-boot-on;
 		proxy-supply = <&display_panel_avdd>;
@@ -61,7 +61,7 @@
 	/delete-property/ lab-supply;
 
 	pinctrl-0 = <&sde_te_active &disp_pins_reset>;
-	qcom,dsi-default-panel = <&dsi_r66451_amoled_cmd>;
+	qcom,dsi-default-panel = <&dsi_oplus21707_dsbj_ili7807s_fhd_plus_144fps_video>;
 };
 
 &dsi_r66451_amoled_cmd {
@@ -128,6 +128,12 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-brightness-max-level = <255>;
 	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+};
+
+&dsi_nt36523_boe_video {
+
 	qcom,bl-update-flag = "delay_until_first_frame";
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;

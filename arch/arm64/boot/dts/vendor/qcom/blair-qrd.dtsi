@@ -5,7 +5,6 @@
 #include "display/holi-sde-display-qrd-pm6125.dtsi"
 #include "display/blair-sde-display-qrd.dtsi"
 #include "holi-thermal-overlay-pm6125.dtsi"
-
 &wcd938x_codec {
 	cdc-vdd-rxtx-supply = <&L9A>;
 	cdc-vddio-supply = <&L9A>;
@@ -18,6 +17,7 @@
 	 */
 	cdc-vdd-mic-bias-supply = <>;
 };
+
 
 &wcd937x_codec {
 	status = "ok";
@@ -43,7 +43,7 @@
 
 
 &sdhc_1 {
-	status = "ok";
+	status = "disable";
 
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&sdc1_on>;
@@ -75,7 +75,9 @@
 	qcom,vdd-io-voltage-level = <1800000 2960000>;
 	qcom,vdd-io-current-level = <0 22000>;
 
-	cd-gpios = <&tlmm 94 GPIO_ACTIVE_LOW>;
+	/*oplus design sd_detect active is HIGH when sd card plug in*/
+	/*cd-gpios = <&tlmm 94 GPIO_ACTIVE_LOW>;*/
+	cd-gpios = <&tlmm 94 GPIO_ACTIVE_HIGH>;
 };
 
 &ufsphy_mem {
@@ -280,7 +282,8 @@
 				hysteresis = <1000>;
 				type = "passive";
 			};
-
+#if OPLUS_STOP_THERAML_ENGINE
+/*
 			gpu_trip: gpu-trip {
 				temperature = <48000>;
 				hysteresis = <0>;
@@ -292,7 +295,8 @@
 				hysteresis = <0>;
 				type = "passive";
 			};
-
+*/
+#endif
 			cx_trip: cx-trip {
 				temperature = <55000>;
 				hysteresis = <5000>;
@@ -305,34 +309,37 @@
 				trip = <&cx_trip>;
 				cooling-device = <&cdsp_sw 4 4>;
 			};
-
+#if OPLUS_STOP_THERAML_ENGINE
+/*
 			gpu-cdev0 {
 				trip = <&gpu_trip>;
-				/* throttle to 650000000Hz */
+				// throttle to 650000000Hz
 				cooling-device = <&msm_gpu THERMAL_NO_LIMIT
 							(THERMAL_MAX_LIMIT-3)>;
 			};
 
 			gpu-cdev1 {
 				trip = <&cx_trip>;
-				/* throttle to 390000000Hz */
+				// throttle to 390000000Hz
 				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-1)
 							(THERMAL_MAX_LIMIT-1)>;
 			};
 
 			silver-cdev {
 				trip = <&silver_trip>;
-				/* throttle to 1516800KHz */
+				// throttle to 1516800KH
 				cooling-device = <&CPU0 THERMAL_NO_LIMIT
 							(THERMAL_MAX_LIMIT-6)>;
 			};
 
 			gold-cdev {
 				trip = <&gold_trip>;
-				/* throttle to 1516800KHz */
+				// throttle to 1516800KHz
 				cooling-device = <&CPU6 THERMAL_NO_LIMIT
 							(THERMAL_MAX_LIMIT-4)>;
 			};
+*/
+#endif
 
 			modem-skin-cdev0 {
 				trip = <&modem_skin_trip0>;
@@ -359,25 +366,25 @@
 
 		trips {
 			modem_trip0: modem-trip0 {
-				temperature = <46000>;
+				temperature = <60000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_trip1: modem-trip1 {
-				temperature = <47000>;
+				temperature = <62000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_trip2: modem-trip2 {
-				temperature = <54000>;
+				temperature = <64000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 		};
 
-		cooling-maps {
+		/*cooling-maps {
 			modem-cdev0 {
 				trip = <&modem_trip0>;
 				cooling-device = <&modem_pa 1 1>;
@@ -392,7 +399,7 @@
 				trip = <&modem_trip2>;
 				cooling-device = <&modem_pa 3 3>;
 			};
-		};
+		};*/
 	};
 
 	xo-therm-step {
@@ -403,25 +410,25 @@
 
 		trips {
 			modem_pa_fr1_trip0: modem-pa-fr1-trip0 {
-				temperature = <45000>;
+				temperature = <60000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_pa_fr1_trip1: modem-pa-fr1-trip1 {
-				temperature = <46000>;
+				temperature = <62000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_pa_fr1_trip2: modem-pa-fr1-trip2 {
-				temperature = <56000>;
+				temperature = <64000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 		};
 
-		cooling-maps {
+		/*cooling-maps {
 			modem_pa_fr1_cdev0 {
 				trip = <&modem_pa_fr1_trip0>;
 				cooling-device = <&modem_pa_fr1 1 1>;
@@ -436,7 +443,7 @@
 				trip = <&modem_pa_fr1_trip2>;
 				cooling-device = <&modem_pa_fr1 3 3>;
 			};
-		};
+		};*/
 	};
 };
 
@@ -458,10 +465,11 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	status = "ok";
+	status = "disabled";
 	qcom,i2c-touch-active = "focaltech,fts_ts";
 
 	focaltech@38 {
+                status = "disabled";
 		compatible = "focaltech,fts_ts";
 		reg = <0x38>;
 		interrupt-parent = <&tlmm>;
@@ -487,6 +495,7 @@
 	};
 };
 
+//#include "camera/blair-camera-sensor-qrd.dtsi"
 &qupv3_se10_i2c {
 	awinic@64 {
 		compatible = "awinic,aw2016_led";
@@ -531,4 +540,4 @@
 	};
 };
 
-#include "camera/blair-camera-sensor-qrd.dtsi"
+//#include "camera/blair-camera-sensor-qrd.dtsi"

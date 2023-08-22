@@ -281,13 +281,15 @@
 				hysteresis = <4000>;
 				type = "passive";
 			};
-
+#if OPLUS_STOP_THERAML_ENGINE
+/*
 			gold_trip: gold-trip {
 				temperature = <43000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
-
+*/
+#endif
 			battery_trip1: battery-trip1 {
 				temperature = <44000>;
 				hysteresis = <2000>;
@@ -299,13 +301,15 @@
 				hysteresis = <4000>;
 				type = "passive";
 			};
-
+#if OPLUS_STOP_THERAML_ENGINE
+/*
 			silver_trip: silver-trip {
 				temperature = <45000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
-
+*/
+#endif
 			battery_trip2: battery-trip2 {
 				temperature = <46000>;
 				hysteresis = <2000>;
@@ -336,7 +340,8 @@
 				trip = <&cx_trip>;
 				cooling-device = <&cdsp_sw 4 4>;
 			};
-
+#if OPLUS_STOP_THERAML_ENGINE
+/*
 			gpu-cdev0 {
 				trip = <&modem_skin_trip1>;
 				/* throttle to 650000000Hz */
@@ -364,7 +369,8 @@
 				cooling-device = <&CPU6 (THERMAL_MAX_LIMIT-5)
 							(THERMAL_MAX_LIMIT-5)>;
 			};
-
+*/
+#endif
 			modem-skin-cdev0 {
 				trip = <&modem_skin_trip0>;
 				cooling-device = <&modem_skin 1 1>;
@@ -382,7 +388,7 @@
 		};
 	};
 
-	pa-therm0-step {
+	/*pa-therm0-step {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
@@ -423,7 +429,7 @@
 				cooling-device = <&modem_pa 3 3>;
 			};
 		};
-	};
+	};*/
 
 	xo-therm-step {
 		polling-delay-passive = <0>;

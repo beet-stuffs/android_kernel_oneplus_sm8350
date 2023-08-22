@@ -18,6 +18,12 @@
 			power-source = <1>;
 		};
 	};
+	pmr735a_cam_therm {
+		pmr735a_cam_therm_default: pmr735a_cam_therm_default {
+			pins = "gpio2";
+			bias-high-impedance;
+		};
+	};
 };
 
 &spmi_bus {
@@ -33,7 +39,11 @@
 			interrupt-names = "eoc";
 			#io-channel-cells = <1>;
 			io-channel-ranges;
-			status = "disabled";
+			status = "ok";
+			//status = "disabled";
+
+			pinctrl-names = "default";
+			pinctrl-0 = <&pmr735a_cam_therm_default>;
 
 			/* PMR735a Channel nodes */
 			pmr735a_ref_gnd {
@@ -62,6 +72,29 @@
 				label = "pmr735a_die_temp";
 				qcom,pre-scaling = <1 1>;
 			};
+
+			pmr735a_cam_therm {
+				reg = <ADC7_GPIO2_100K_PU>;
+				label = "pmr735a_cam_therm";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+			};
+		};
+
+		pmr735a_adc_tm_iio: adc_tm@3400 {
+			compatible = "qcom,adc-tm5-iio";
+			reg = <0x3400>;
+			#thermal-sensor-cells = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			io-channels = <&pmr735a_vadc ADC7_GPIO2_100K_PU>;
+
+			pmr735a_cam_therm {
+				reg = <ADC7_GPIO2_100K_PU>;
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+			};
 		};
 	};
 };
@@ -73,8 +106,6 @@
 			&msm_therm_default
 			&rfc_cam_therm_default
 			&rear_cam_flash_therm_default>;
-
-	/delete-node/ xo_therm;
 
 	pa_therm1 {
 		reg = <ADC5_AMUX_THM1_100K_PU>;
@@ -153,13 +184,23 @@
 			bias-high-impedance;
 		};
 	};
+
+	key_vol_down {
+		key_vol_down_default: key_vol_down_default {
+			pins = "gpio2";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
+	};
 };
 
 &pm6125_adc_tm {
 	io-channels = <&pm6125_vadc ADC5_GPIO4_100K_PU>,
 			<&pm6125_vadc ADC5_AMUX_THM1_100K_PU>,
-			<&pm6125_vadc ADC5_GPIO3_100K_PU>,
-			<&pm6125_vadc ADC5_AMUX_THM2_100K_PU>;
+			<&pm6125_vadc ADC5_AMUX_THM2_100K_PU>,
+			<&pm6125_vadc ADC5_XO_THERM_100K_PU>;
 
 	/* Channel nodes */
 	pa_therm2 {
@@ -174,14 +215,14 @@
 		qcom,hw-settle-time = <200>;
 	};
 
-	rear_cam_flash_therm {
-		reg = <ADC5_GPIO3_100K_PU>;
+	quiet_therm {
+		reg = <ADC5_AMUX_THM2_100K_PU>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
 
-	quiet_therm {
-		reg = <ADC5_AMUX_THM2_100K_PU>;
+	xo_therm {
+		reg = <ADC5_XO_THERM_100K_PU>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
@@ -252,17 +293,6 @@
 	/delete-node/ pmr735b_die_temp;
 };
 
-&pmk8350_adc_tm {
-	interrupts = <0x6 0x34 0x0 IRQ_TYPE_EDGE_RISING>;
-	io-channels = <&pmk8350_vadc PMK8350_ADC7_AMUX_THM1_100K_PU>;
-
-	xo_therm {
-		reg = <PMK8350_ADC7_AMUX_THM1_100K_PU>;
-		qcom,ratiometric;
-		qcom,hw-settle-time = <200>;
-	};
-};
-
 &thermal_zones {
 	sdm-skin-therm-usr {
 		polling-delay-passive = <0>;
@@ -294,11 +324,11 @@
 		};
 	};
 
-	camera-therm-usr {
+	cam-therm-usr {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "user_space";
-		thermal-sensors = <&pm6125_adc_tm ADC5_GPIO3_100K_PU>;
+		thermal-sensors = <&pmr735a_adc_tm_iio ADC7_GPIO2_100K_PU>;
 		wake-capable-sensor;
 		trips {
 			active-config0 {
@@ -364,7 +394,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "user_space";
-		thermal-sensors = <&pmk8350_adc_tm PMK8350_ADC7_AMUX_THM1_100K_PU>;
+		thermal-sensors = <&pm6125_adc_tm ADC5_XO_THERM_100K_PU>;
 		wake-capable-sensor;
 		trips {
 			active-config0 {
@@ -374,6 +404,7 @@
 			};
 		};
 	};
+
 };
 
 /*

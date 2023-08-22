@@ -16,12 +16,12 @@
 &tlmm {
 	display_panel_avdd_default: display_panel_avdd_default {
 		mux {
-			pins = "gpio24";
+			pins = "gpio101";
 			function = "gpio";
 		};
 
 		config {
-			pins = "gpio24";
+			pins = "gpio101";
 			drive-strength = <8>;
 			bias-disable = <0>;
 			output-high;
@@ -36,7 +36,7 @@
 		regulator-min-microvolt = <3000000>;
 		regulator-max-microvolt = <3000000>;
 		regulator-enable-ramp-delay = <233>;
-		gpio = <&tlmm 24 0>;
+		gpio = <&tlmm 101 0>;
 		enable-active-high;
 		regulator-boot-on;
 		proxy-supply = <&display_panel_avdd>;

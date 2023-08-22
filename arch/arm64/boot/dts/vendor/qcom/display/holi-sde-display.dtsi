@@ -35,8 +35,8 @@
 	qcom,platform-te-gpio = <&tlmm 23 0>;
 	qcom,panel-te-source = <0>;
 
-	vddio-supply = <&L1E>;
-	vdd-supply = <&L8A>;
+	vddio-supply = <&L13A>;
+	//vdd-supply = <&L8A>;
 
 	lab-supply = <&ab_vreg>;
 	ibb-supply = <&ibb_vreg>;

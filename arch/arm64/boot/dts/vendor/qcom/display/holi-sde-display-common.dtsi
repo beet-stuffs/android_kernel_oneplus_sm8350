@@ -13,7 +13,23 @@
 #include "dsi-panel-nt36672e-fhd-plus-120-video.dtsi"
 #include "dsi-panel-nt36672e-fhd-plus-144-video.dtsi"
 #include "dsi-panel-nt36672e-fhd-plus-60hz-video.dtsi"
+#include "dsi-panel-oplus21221samsung-ams643ye01-1080-2400.dtsi"
+#include "dsi-panel-oplus20159-s643xy05-samsung-fhd-video.dtsi"
+#include "dsi-panel-oplus20159-s643xy05-samsung-fhd-video-ft3518.dtsi"
 #include <dt-bindings/clock/mdss-10nm-pll-clk.h>
+/* #ifdef */
+#include "dsi-panel-oplus21707-dsbj-ili7807s-fhd_plus-144fps-video.dtsi"
+#include "dsi-panel-oplus21707-jdi-td4377-fhd_plus-video.dtsi"
+/* #endif  */
+#include "dsi-panel-oplus22667-cost-ili7807s-fhd_plus-120fps-video.dtsi"
+#include "dsi-panel-oplus21291samsung-ams643ye01-1080-2400.dtsi"
+#include "dsi-panel-nt36523-boe-video.dtsi"
+#include "dsi-panel-nt36672c-tianma-fhd-video.dtsi"
+#include "dsi-panel-oplus22035-tm-ili7838a-1080-2412-dsc-cmd.dtsi"
+#include "dsi-panel-oplus22035-boe-nt37705-1080-2412-dsc-cmd.dtsi"
+#include "dsi-panel-oplus22821-nt36672c-tianma-fhd-video.dtsi"
+#include "dsi-panel-oplus22045-ili7807s-dsjdi-fhd-video.dtsi"
+#include "dsi-panel-oplus22035-visionox-ili7838a-1080-2412-dsc-cmd.dtsi"
 
 &soc {
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
@@ -195,8 +211,9 @@
 		qcom,dsi-ctrl = <&mdss_dsi0>;
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 
-		qcom,mdp = <&mdss_mdp>;
+		qcom,mdp = <&mdss_mdp>;		
 		qcom,dsi-default-panel = <&dsi_rm69299_visionox_amoled_video>;
+
 	};
 };
 
@@ -207,7 +224,7 @@
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 1c 07 07 23 21 07
-				07 05 02 04 00];
+				07 05 02 04 00 00 00];
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
@@ -298,6 +315,10 @@
 
 &dsi_r66451_amoled_90hz_cmd {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+        qcom,platform-te-gpio = <&tlmm 23 0>;
+        qcom,platform-reset-gpio = <&tlmm 47 0>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_avdd>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-t-clk-post = <0x0A>;
 	qcom,mdss-dsi-t-clk-pre = <0x1D>;
 	qcom,mdss-dsi-display-timings {
@@ -312,6 +333,36 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
 				06 06 02 04 00];
 			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_oplus21221samsung_ams643ye01_1080_2400_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_avdd>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <2047>;
+	qcom,mdss-brightness-max-level = <2047>;
+	qcom,mdss-brightness-default-level = <400>;
+	qcom,platform-te-gpio = <&tlmm 23 0>;
+	qcom,platform-reset-gpio = <&tlmm 47 0>;
+	oplus,mdss-dsi-vendor-name = "AMS643XF01";
+	oplus,mdss-dsi-manufacture = "samsung2047";
+	oplus,osc_support;
+
+	qcom,ulps-enabled;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"src_byte_clk0", "src_pixel_clk0",
+				"shadow_byte_clk0", "shadow_pixel_clk0";
+	qcom,mdss-dsi-t-clk-post = <0x1A>;
+	qcom,mdss-dsi-t-clk-pre = <0x1F>;
+	qcom,mdss-dsi-display-timings {
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
+				06 06 02 04 00];
+
+			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};

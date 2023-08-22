@@ -247,6 +247,7 @@
 	};
 
 	soc: soc { };
+
 };
 
 &firmware {
@@ -257,8 +258,12 @@
 	android {
 		compatible = "android,firmware";
 		vbmeta {
-			compatible = "android,vbmeta";
-			parts = "vbmeta,boot,system,vendor,dtbo";
+            compatible = "android,vbmeta";
+            //#ifdef OPLUS_FEATURE_BOOT_SECURITY
+            parts = "vbmeta,boot,system,vendor,dtbo,vendor_boot";
+            //#else
+            //parts = "vbmeta,boot,system,vendor,dtbo";
+            //#endif
 		};
 
 		fstab {
@@ -322,32 +327,32 @@
 
 	pil_adsp_mem: adsp@86700000 {
 		no-map;
-		reg = <0x0 0x86700000 0x0 0x2000000>;
+		reg = <0x0 0x86700000 0x0 0x2800000>;
 	};
 
-	pil_cdsp_mem: cdsp@88700000 {
+	pil_cdsp_mem: cdsp@88f00000 {
 		no-map;
-		reg = <0x0 0x88700000 0x0 0x1e00000>;
+		reg = <0x0 0x88f00000 0x0 0x1e00000>;
 	};
 
-	pil_video_mem: video@8a500000 {
+	pil_video_mem: video@8b200000 {
 		no-map;
-		reg = <0x0 0x8a500000 0x0 0x500000>;
+		reg = <0x0 0x8b200000 0x0 0x500000>;
 	};
 
-	pil_ipa_fw_mem: ipa_fw@8aa00000 {
+	pil_ipa_fw_mem: ipa_fw@8b700000 {
 		no-map;
-		reg = <0x0 0x8aa00000 0x0 0x10000>;
+		reg = <0x0 0x8b700000 0x0 0x10000>;
 	};
 
-	pil_ipa_gsi_mem: ipa_gsi@8aa10000 {
+	pil_ipa_gsi_mem: ipa_gsi@8b710000 {
 		no-map;
-		reg = <0x0 0x8aa10000 0x0 0xa000>;
+		reg = <0x0 0x8b710000 0x0 0xa000>;
 	};
 
-	pil_gpu_micro_code_mem: gpu_micro_code@8aa1a000 {
+	pil_gpu_micro_code_mem: gpu_micro_code@8b71a000 {
 		no-map;
-		reg = <0x0 0x8aa1a000 0x0 0x2000>;
+		reg = <0x0 0x8b71a000 0x0 0x2000>;
 	};
 
 	pil_mpss_wlan_mem: mpss_wlan@8b800000 {
@@ -384,14 +389,14 @@
 		reg = <0x0 0x85e00000 0x0 0x00100000>;
 		label = "dfps_data_region";
 	};
-
+/*
 	qcom: ramoops {
 		compatible = "ramoops";
 		reg = <0x0 0xd0000000 0x0 0x200000>;
 		pmsg-size = <0x200000>;
 		mem-type = <2>;
 	};
-
+*/
 	/* global autoconfigured region for contiguous allocations */
 	linux,cma {
 		compatible = "shared-dma-pool";
@@ -2330,6 +2335,9 @@
 				qcom,intents = <0x800  5
 						0x2000 3
 						0x4400 2>;
+
+				/* Qcom case-06236027 add for qrtr wakeup-source */
+				qcom,non-wake-svc = <0x190>;
 			};
 
 			qcom,adsp_glink_ssr {
@@ -2485,6 +2493,19 @@
 		qcom,vm-nav-path;
 	};
 
+    //#ifdef VENDOR_EDIT
+    //#ifdef FEATURE_OPLUS_NV_BACKUP
+    //add for creating a shared memory with uio for nv backup and restore
+    qcom,oembackup_sharedmem@0 {
+        compatible = "qcom,sharedmem-uio";
+        reg = <0x0 0x280000>;
+        reg-names = "oembackup";
+        qcom,client-id = <0x00000004>;
+        qcom,guard-memory;
+    };
+    //#endif /* FEATURE_OPLUS_NV_BACKUP */
+    //#endif /* VENDOR_EDIT */
+
 	ufsphy_mem: ufsphy_mem@4807000 {
 		reg = <0x4807000 0xDDC>;
 		reg-names = "phy_mem";
@@ -2628,7 +2649,7 @@
 		phy-names = "ufsphy";
 		#reset-cells = <1>;
 		limit-phy-submode = <0>;
-		spm-level = <5>;
+		spm-level = <3>;
 		rpm-level = <3>;
 
 		lanes-per-direction = <1>;

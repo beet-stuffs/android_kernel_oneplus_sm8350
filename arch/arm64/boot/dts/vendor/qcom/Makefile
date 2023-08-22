@@ -1,5 +1,4 @@
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
-ifneq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
 	lahaina-mtp-overlay.dtbo \
@@ -92,56 +91,6 @@ dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 	lahaina-v2.1-mtp-hsp-pro.dts \
 	lahaina-v2.1-cdp-hsp-pro.dts \
 	lahaina-v2.1-qrd-hsp-pro.dts
-endif
-endif
-
-ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-dtbo-$(CONFIG_ARCH_HOLI) += holi-rumi-overlay.dtbo \
-	holi-mtp-overlay.dtbo \
-	holi-cdp-overlay.dtbo \
-	holi-cdp-lcd-overlay.dtbo \
-	holi-qrd-overlay.dtbo \
-	holi-atp-overlay.dtbo \
-	holi-mtp-usbc-overlay.dtbo \
-	holi-mtp-pm6125-overlay.dtbo \
-	holi-cdp-pm6125-overlay.dtbo \
-	holi-cdp-lcd-pm6125-overlay.dtbo \
-	holi-mtp-usbc-pm6125-overlay.dtbo \
-	holi-mtp-pm6125-nopmi-overlay.dtbo \
-	holi-qrd-pm6125-overlay.dtbo \
-	holi-qrd-pm6125-nopmi-overlay.dtbo
-
-holi-rumi-overlay.dtbo-base := holi.dtb
-holi-mtp-overlay.dtbo-base := holi.dtb
-holi-cdp-overlay.dtbo-base := holi.dtb
-holi-cdp-lcd-overlay.dtbo-base := holi.dtb
-holi-qrd-overlay.dtbo-base := holi.dtb
-holi-atp-overlay.dtbo-base := holi.dtb
-holi-mtp-usbc-overlay.dtbo-base := holi.dtb
-holi-mtp-pm6125-overlay.dtbo-base := holi.dtb
-holi-cdp-pm6125-overlay.dtbo-base := holi.dtb
-holi-cdp-lcd-pm6125-overlay.dtbo-base := holi.dtb
-holi-mtp-usbc-pm6125-overlay.dtbo-base := holi.dtb
-holi-mtp-pm6125-nopmi-overlay.dtbo-base := holi.dtb
-holi-qrd-pm6125-overlay.dtbo-base := holi.dtb
-holi-qrd-pm6125-nopmi-overlay.dtbo-base := holi.dtb
-
-else
-dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
-	holi-mtp.dtb \
-	holi-cdp.dtb \
-	holi-cdp-lcd.dtb \
-	holi-qrd.dtb \
-	holi-atp.dtb \
-	holi-mtp-usbc.dtb\
-	holi-mtp-pm6125.dtb \
-	holi-cdp-pm6125.dtb \
-	holi-cdp-lcd-pm6125.dtb \
-	holi-mtp-usbc-pm6125.dtb \
-	holi-mtp-pm6125-nopmi.dtb \
-	holi-qrd-pm6125.dtb \
-	holi-qrd-pm6125-nopmi.dtb
-
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)

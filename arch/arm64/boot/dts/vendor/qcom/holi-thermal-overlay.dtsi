@@ -9,6 +9,8 @@
 };
 
 &thermal_zones {
+//delete low battery policy for performance
+/*
 	socd {
 		cooling-maps {
 			socd_cpu6 {
@@ -22,6 +24,7 @@
 			};
 		};
 	};
+*/
 
 	pm7250b_tz {
 		cooling-maps {
@@ -270,3 +273,19 @@
 		};
 	};
 };
+
+//#ifdef OPLUS_FEATURE_THERMAL_HORAE
+/ {
+        shell_front {
+                compatible = "oplus,shell-temp";
+        };
+
+        shell_frame {
+                compatible = "oplus,shell-temp";
+        };
+
+        shell_back {
+                compatible = "oplus,shell-temp";
+        };
+};
+//#endif
