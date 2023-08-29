@@ -207,7 +207,7 @@ struct state_disorder_monitor {
 enum en_gpio_type {
 	EN_CC_MUX = 0,
 	EN_VREG_5V,
-	EN_GPIO_MAX = 3
+	EN_GPIO_MAX = 2
 };
 
 struct en_gpio_item {
@@ -1206,32 +1206,34 @@ static void sgm7220_destroy_device(struct sgm7220_info *info)
 
 static int sgm7220_parse_gpio_from_dts(struct device_node *np, struct sgm7220_info *info)
 {
-	int ret;
+	int ret = -1;
 	int i;
 
-	/* irq_line */
-	ret = of_get_named_gpio(np, "sgm7220,irq_gpio", 0);
-	if (ret < 0) {
-		pr_err("%s: error invalid irq gpio err: %d\n", __func__, ret);
+	if (!np) {
+        pr_err("%s: np is null\n", __func__);
 		return ret;
 	}
-	info->irq_gpio = ret;
-	pr_debug("%s: valid irq_gpio number: %d\n", __func__, ret);
 
+	/* irq_line */
+	info->irq_gpio = of_get_named_gpio(np, "sgm7220,irq_gpio", 0);
+    	if (gpio_is_valid(info->irq_gpio))
+        	pr_debug("%s: valid irq_gpio number: %d\n", __func__, info->irq_gpio);
+    	else {
+		pr_err("%s: error invalid irq_gpio\n", __func__);
+		return ret;
+	}
 	/*
 	 * en gpios, for changing state during suspend to reduce power consumption,
 	 * as these gpios may already have initial config in the dts files,
 	 * getting gpio failure here may not be a critical error.
 	 */
 	for (i = 0; i < EN_GPIO_MAX; i++) {
-		ret = of_get_named_gpio(np, en_gpio_info[i].name, 0);
-		if (ret < 0) {
-			info->en_gpio[en_gpio_info[i].index] = 0;
-			pr_err("%s: error invalid en gpio [%s] err: %d\n",
-			       __func__, en_gpio_info[i].name, ret);
-		} else {
-			info->en_gpio[en_gpio_info[i].index] = ret;
-			pr_debug("%s: valid en gpio number: %d\n", __func__, ret);
+		info->en_gpio[en_gpio_info[i].index] = of_get_named_gpio(np, en_gpio_info[i].name, 0);
+        	if (gpio_is_valid(info->en_gpio[en_gpio_info[i].index]))
+            		pr_debug("%s: valid en_gpio number: %d\n", __func__, info->en_gpio[en_gpio_info[i].index]);
+        	else {
+            		info->en_gpio[en_gpio_info[i].index] = 0;
+            		pr_err("%s: error invalid en_gpio\n", __func__);
 		}
 	}
 
