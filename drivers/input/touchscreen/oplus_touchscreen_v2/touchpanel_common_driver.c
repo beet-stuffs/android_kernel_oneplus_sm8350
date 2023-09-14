@@ -115,6 +115,9 @@ extern  int reconfig_power_control(struct touchpanel_data *ts);
 #if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
 static int tp_gesture_enable_flag(unsigned int tp_index);
 extern int (*tp_gesture_enable_notifier)(unsigned int tp_index);
+extern int (*tp_cs_gpio_notifier)(bool enable, unsigned int tp_index);
+extern int (*tp_reset_gpio_notifier)(bool enable, unsigned int tp_index);
+extern void (*tp_ftm_extra_notifier)(unsigned int tp_index);
 #endif
 
 #ifdef CONFIG_TOUCHPANEL_MTK_PLATFORM
@@ -3089,6 +3092,9 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 
 	/*step10 : FTM process*/
 	ts->boot_mode = get_boot_mode();
+	tp_cs_gpio_notifier = tp_control_cs_gpio;
+	tp_reset_gpio_notifier = tp_control_reset_gpio;
+	tp_ftm_extra_notifier = tp_ftm_extra;
 
 	if (is_ftm_boot_mode(ts)) {
 		ts->ts_ops->ftm_process(ts->chip_data);

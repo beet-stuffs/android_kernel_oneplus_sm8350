@@ -1,30 +1,7 @@
-/************************************************************************************
-** File: - MSM8953_LA_1_0\android\kernel\include\soc\oplus\oplus_fp_common.h
-** OPLUS_FEATURE_FINGERPRINT
-** Copyright (C), 2008-2020, OPLUS Mobile Comm Corp., Ltd
-**
-** Description:
-**          fingerprint compatibility configuration
-**
-** Version: 1.0
-** Date created: 18:03:11, 23/07/2016
-**
-** --------------------------- Revision History: --------------------------------
-**  <author>                 <data>                        <desc>
-**  Ziqing.guo   2016/07/23           create the file
-**  Hongdao.yu   2017/03/09           add FP_FPC gpio_id0 fp_id0 to adapt for 16037 15103
-**  Hongdao.yu   2017/03/22           remake ID match code
-**  Ziqing.guo   2017/04/29           add for displaying secure boot switch
-**  Bin.Li       2017/12/12           remove secure part
-**  Ziqing.guo   2019/02/12           modify FP_ID_MAX_LENGTH (20 -> 60)
-**  Qing.Guan    2019/04/01           add for egis optical fp
-**  Ziqing.Guo   2019/07/17           modify for Euclid
-**  Ziqing.Guo   2019/07/18           add for power mode
-**  oujinrong    2019/09/03           add power list for Euclid
-**  chenpan      2019/10/24           add poweron level of gpio
-**  Ran.Chen    2019/10/24            add for notify_tpinfo_flag
-**  Ran.Chen    2020/03/19            add for ftm_poweroff_flag
-************************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifndef _OPLUS_FP_COMMON_H_
 #define _OPLUS_FP_COMMON_H_
@@ -76,6 +53,7 @@ typedef enum {
     FP_SILEAD_6159 = 19,
     FP_JIIOV_0302 = 23,
     FP_JIIOV_0301 = 24,
+    FP_GOODIX_3956 = 27,
     FP_UNKNOWN,
 } fp_vendor_t;
 

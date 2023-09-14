@@ -632,7 +632,7 @@ static int nfc_ioctl_power_states(struct nfc_dev *nfc_dev, unsigned long arg)
  *
  * Check the NFC Chipset and firmware version details
  */
-unsigned int nfc_ioctl_nfcc_info(struct file *filp, unsigned long arg)
+static unsigned int nfc_ioctl_nfcc_info(struct file *filp, unsigned long arg)
 {
 	unsigned int r = 0;
 	struct nfc_dev *nfc_dev = filp->private_data;

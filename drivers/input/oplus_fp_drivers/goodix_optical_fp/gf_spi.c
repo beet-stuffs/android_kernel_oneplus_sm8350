@@ -41,9 +41,10 @@
 #elif defined(USE_PLATFORM_BUS)
 #include <linux/platform_device.h>
 #endif
+//#ifdef CONFIG_DRM_MSM
 #if IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY) || IS_ENABLED(CONFIG_DRM_MSM)
 #include <linux/msm_drm_notify.h>
-#endif
+#endif //IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY) || IS_ENABLED(CONFIG_DRM_MSM)
 #include <soc/oplus/system/boot_mode.h>
 #include <linux/version.h>
 
@@ -346,20 +347,6 @@ static void irq_cleanup(struct gf_dev *gf_dev)
     free_irq(gf_dev->irq, gf_dev);//need modify
 }
 
-static void gf_auto_send_touchdown(void)
-{
-	struct fp_underscreen_info tp_info;
-	tp_info.touch_state = 1;
-	gf_opticalfp_irq_handler(&tp_info);
-}
-
-static void gf_auto_send_touchup(void)
-{
-	struct fp_underscreen_info tp_info;
-	tp_info.touch_state = 0;
-	gf_opticalfp_irq_handler(&tp_info);
-}
-
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     struct gf_dev *gf_dev = &gf;
@@ -426,12 +413,12 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		gf_power_reset(gf_dev);
 		gf_dev->device_available = 1;
 		break;
-        case GF_IOC_INPUT_KEY_EVENT:
+	case GF_IOC_INPUT_KEY_EVENT:
 		if (copy_from_user(&gf_key, (struct gf_key *)arg, sizeof(struct gf_key))) {
-                pr_info("Failed to copy input key event from user to kernel\n");
-                retval = -EFAULT;
-                break;
-            }
+			pr_info("Failed to copy input key event from user to kernel\n");
+			retval = -EFAULT;
+			break;
+		}
 
             gf_kernel_key_input(gf_dev, &gf_key);
             break;
@@ -502,14 +489,6 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             lasttouchmode = 0;
             pr_debug("%s GF_IOC_CLEAN_TOUCH_FLAG\n", __func__);
             break;
-	case GF_IOC_AUTO_SEND_TOUCHDOWN:
-		pr_info("%s GF_IOC_AUTO_SEND_TOUCHDOWN\n", __func__);
-		gf_auto_send_touchdown();
-		break;
-	case GF_IOC_AUTO_SEND_TOUCHUP:
-		pr_info("%s GF_IOC_AUTO_SEND_TOUCHUP\n", __func__);
-		gf_auto_send_touchup();
-		break;
         default:
             pr_warn("unsupport cmd:0x%x\n", cmd);
             break;
@@ -742,17 +721,6 @@ static int gf_probe(struct platform_device *pdev)
     /* If we can allocate a minor number, hook up this device.
      * Reusing minors is fine so long as udev or mdev is working.
      */
-	if ((FP_GOODIX_3268 != get_fpsensor_type())
-			&& (FP_GOODIX_5288 != get_fpsensor_type())
-			&& (FP_GOODIX_5228 != get_fpsensor_type())
-			&& (FP_GOODIX_5658 != get_fpsensor_type())
-			&& (FP_GOODIX_OPTICAL_95 != get_fpsensor_type())
-			&& (FP_GOODIX_3626 != get_fpsensor_type())) {
-        pr_err("%s, found not goodix sensor\n", __func__);
-        status = -EPROBE_DEFER;
-        return status;
-	}
-
     mutex_lock(&device_list_lock);
     minor = find_first_zero_bit(minors, N_SPI_MINORS);
     if (minor < N_SPI_MINORS) {
@@ -811,6 +779,7 @@ static int gf_probe(struct platform_device *pdev)
 #endif
 
     gf_dev->notifier = goodix_noti_block;
+//#if defined(CONFIG_DRM_MSM)
 #if IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY) || IS_ENABLED(CONFIG_DRM_MSM)
     status = msm_drm_register_client(&gf_dev->notifier);
     if (status == -1) {
@@ -821,7 +790,7 @@ static int gf_probe(struct platform_device *pdev)
     if (status == -1) {
         return status;
     }
-#endif
+#endif //IS_ENABLED(CONFIG_DRM_OPLUS_NOTIFY) || IS_ENABLED(CONFIG_DRM_MSM)
     wake_lock_init(&fp_wakelock, WAKE_LOCK_SUSPEND, "fp_wakelock");
     wake_lock_init(&gf_cmd_wakelock, WAKE_LOCK_SUSPEND, "gf_cmd_wakelock");
     pr_err("register goodix_fp_ok\n");
@@ -928,6 +897,19 @@ static int __init gf_init(void)
      * that will key udev/mdev to add/remove /dev nodes.  Last, register
      * the driver which manages those device numbers.
      */
+
+    if ((FP_GOODIX_3268 != get_fpsensor_type())
+        	&& (FP_GOODIX_5288 != get_fpsensor_type())
+        	&& (FP_GOODIX_5228 != get_fpsensor_type())
+        	&& (FP_GOODIX_5658 != get_fpsensor_type())
+		&& (FP_GOODIX_OPTICAL_95 != get_fpsensor_type())
+		&& (FP_GOODIX_3626 != get_fpsensor_type())
+        	&& (FP_GOODIX_3956 != get_fpsensor_type())) {
+        pr_err("%s, found not goodix sensor\n", __func__);
+        status = -EINVAL;
+        return status;
+    }
+
     BUILD_BUG_ON(N_SPI_MINORS > 256);
     status = register_chrdev(SPIDEV_MAJOR, CHRD_DRIVER_NAME, &gf_fops);
     if (status < 0) {
@@ -980,7 +962,7 @@ static void __exit gf_exit(void)
 }
 module_exit(gf_exit);
 
-MODULE_SOFTDEP("pre: oplus_fp_common");
+MODULE_SOFTDEP("pre:oplus_fp_common");
 MODULE_AUTHOR("Jiangtao Yi, <yijiangtao@goodix.com>");
 MODULE_AUTHOR("Jandy Gou, <gouqingsong@goodix.com>");
 MODULE_DESCRIPTION("goodix fingerprint sensor device driver");

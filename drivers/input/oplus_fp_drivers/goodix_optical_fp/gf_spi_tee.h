@@ -1,25 +1,8 @@
- /************************************************************************************
-** File: - fingerprints_hal\drivers\goodix_fp\gf_spi_tee.h
-** OPLUS_FEATURE_FINGERPRINT
-** Copyright (C), 2008-2016, OPLUS Mobile Comm Corp., Ltd
-**
-** Description:
-**      driver definition for sensor driver
-**
-** Version: 1.0
-** Date created: 15:03:11,12/08/2017
-** TAG: BSP.Fingerprint.Basic
-**
-** --------------------------- Revision History: --------------------------------
-** <author>     <data>        <desc>
-** Ran.Chen     2017/08/11    create the file for goodix 3268
-** Ran.Chen     2017/09/08    add gf_cmd_wakelock
-** Hongdao.yu   2018/03/09    modify irq/reset/power time sequence
-** Dongnan.Wu   2019/02/23    modify for 18073 goodix device
-** Bangxiong.Wu 2019/04/05    add for correcting time sequence during boot
-** Dongnan.Wu   2019/05/21    add 19011&19301 platform support
-** Zemin.Li     2020/01/16    add is_optical flag
-************************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
+
 #ifndef __GF_SPI_H
 #define __GF_SPI_H
 

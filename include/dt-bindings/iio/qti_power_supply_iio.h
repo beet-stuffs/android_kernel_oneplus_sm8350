@@ -155,3 +155,7 @@
 /* BMS */
 #define PSY_IIO_CLEAR_SOH			0x7c
 #endif /* __QTI_POWER_SUPPLY_IIO_H__ */
+
+//#ifdef OPLUS_FEATURE_CHG_BASIC
+#define PSY_IIO_PD_SDP				0xa0
+//#endif

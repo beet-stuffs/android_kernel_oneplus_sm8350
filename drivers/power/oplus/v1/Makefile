@@ -72,7 +72,6 @@ oplus_chg-y += voocphy/oplus_sc8547_slave.o
 oplus_chg-y += charger_ic/s2asl01_switching.o
 ifeq ($(CONFIG_OPLUS_SM6375R_CHARGER),y)
 oplus_chg-y += wireless_ic/oplus_p922x.o
-oplus_chg-y += wireless_ic/oplus_ra9530.o
 endif
 oplus_chg-y += charger_ic/oplus_switching.o
 oplus_chg-y += wireless_ic/oplus_nu1619.o

@@ -454,11 +454,12 @@ int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
     mdelay(delay_ms);
     return 0;
 }
+
 int gf_power_reset(struct gf_dev *gf_dev)
 {
 	if (gf_dev == NULL) {
-        pr_info("Input buff is NULL.\n");
-        return -1;
+		pr_info("Input buff is NULL.\n");
+		return -1;
 	}
 	gpio_set_value(gf_dev->reset_gpio, 0);
 	gf_power_off(gf_dev);
@@ -468,6 +469,7 @@ int gf_power_reset(struct gf_dev *gf_dev)
 	mdelay(3);
 	return 0;
 }
+
 int gf_irq_num(struct gf_dev *gf_dev)
 {
     if(gf_dev == NULL) {

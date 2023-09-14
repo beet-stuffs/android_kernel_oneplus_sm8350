@@ -53,25 +53,23 @@
   tp_dsi_display_secondary
   tp_judge_ic_match_commandline
   kevent_send_to_user
-#endif /*VENDOR_EDIT*/
+#endif /*OPLUS_FEATURE_TP_BASIC*/
 
 #ifdef OPLUS_FEATURE_OPROJECT
   get_project
   get_Modem_Version
+  get_eng_version
+  is_confidential
   get_eng_version
   startup_mode
   bootmode
   oplus_ftm_mode
   charger_present
   build_variant
-  sim_card_num
-  seq_printf
-  proc_create_data
-  remove_proc_entry
+  sim_card_nums
   get_boot_mode
   get_PCB_Version
   qcom_smem_get
-  is_confidential
 #endif /* OPLUS_FEATURE_OPROJECT */
 
 #ifdef OPLUS_BUG_STABILITY
@@ -84,7 +82,6 @@
 
 #ifdef VENDOR_EDIT
   commit_creds
-  prepare_creds
   power_supply_unregister
   round_jiffies_relative
   i2c_smbus_read_byte_data
@@ -93,7 +90,15 @@
   i2c_smbus_write_i2c_block_data
   i2c_smbus_write_word_data
   i2c_smbus_read_word_data
+  i2c_unregister_device
 #endif /*VENDOR_EDIT*/
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+  typec_partner_set_identity
+  class_for_each_device
+  device_set_of_node_from_dev
+  __kfifo_free
+#endif /*OPLUS_FEATURE_CHG_BASIC*/
 
 #ifdef OPLUS_FEATURE_FINGERPRINT
   devm_gpio_free
@@ -116,37 +121,11 @@
   oplus_show_utc_time
 #endif
 
-#ifdef OPLUS_FEATURE_APP_MONITOR
-  statistics_monitor_apps_rtt_via_uid
-  apps_monitor_netlink_send_to_user
-#endif
-
-#ifdef OPLUS_FEATURE_WIFI_DCS_SWITCH
-#Add for wifi switch monitor
+#ifdef OPLUS_FEATURE_SWITCH_CHECK
+#Add for: check fw status for switch issue
   driver_create_file
-#endif /* OPLUS_FEATURE_WIFI_DCS_SWITCH */
+#endif /* OPLUS_FEATURE_SWITCH_CHECK */
 
 #ifdef OPLUS_FEATURE_NFC_GKI
   prj_name
-  spi_set_cs_timing
-  devm_gpiod_get
 #endif
-revert_creds
-
-#ifdef OPLUS_FEATURE_EXPLORER
-sdio_enable_func
-sdio_disable_func
-sdio_release_host
-sdio_claim_host
-sdio_release_irq
-sdio_claim_irq
-sdio_unregister_driver
-sdio_register_driver
-sdio_set_block_size
-sdio_writesb
-sdio_memcpy_toio
-sdio_memcpy_fromio
-sdio_writeb
-sdio_readb
-sdio_writeb_readb
-#endif/*OPLUS_FEATURE_EXPLORER*/

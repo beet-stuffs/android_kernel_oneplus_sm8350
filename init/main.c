@@ -479,6 +479,24 @@ void __init parse_early_options(char *cmdline)
 		   do_early_param);
 }
 
+static bool printk_disable_uart = true;
+int board_uart_console_status(char *cmdline)
+{
+        char *substr = NULL;
+        substr = strstr(cmdline, "printk.disable_uart=0");
+        if (substr) {
+                printk_disable_uart = false;
+                return 0;
+        }
+	printk_disable_uart = true;
+        return 0;
+}
+bool ext_boot_with_console(void)
+{
+        return !printk_disable_uart;
+}
+EXPORT_SYMBOL(ext_boot_with_console);
+
 /* Arch code calls this early on, or if not, just before other parsing. */
 void __init parse_early_param(void)
 {

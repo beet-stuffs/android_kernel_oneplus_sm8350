@@ -1,23 +1,7 @@
-/************************************************************************************
- ** File: - \android\vendor\oplus_app\fingerprints_hal\drivers\goodix_fp\gf_platform.c
- ** OPLUS_FEATURE_FINGERPRINT
- ** Copyright (C), 2008-2017, OPLUS Mobile Comm Corp., Ltd
- **
- ** Description:
- **      goodix fingerprint kernel device driver
- **
- ** Version: 1.0
- ** Date created: 10:10:11,11/24/2017
- ** TAG: BSP.Fingerprint.Basic
- **
- ** --------------------------- Revision History: --------------------------------
- **  <author>        <data>          <desc>
- **  Dongnan.Wu     2019/02/23      init the platform driver for goodix device
- **  Dongnan.Wu     2019/03/18      modify for goodix fp spi drive strength
- **  Bangxiong.Wu   2019/04/05      modify for correcting time sequence during boot
- **  Dongnan.Wu     2019/05/21      add 19011&19301 platform support
- **  Zemin.Li       2020/01/16      add is_optical flag for G_5658 using optical_driver
-************************************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #include <linux/delay.h>
 #include <linux/workqueue.h>
@@ -26,7 +10,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/timer.h>
 #include <linux/err.h>
-#include <soc/oplus/oplus_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #include "gf_spi_tee.h"
 
@@ -43,6 +27,7 @@
 
 //static struct pinctrl *gf_irq_pinctrl = NULL;
 //static struct pinctrl_state *gf_irq_no_pull = NULL;
+int g_cs_gpio_disable;
 
 #ifndef USED_GPIO_PWR
 static int vreg_setup(struct gf_dev *goodix_fp, fp_power_info_t *pwr_info,
@@ -107,6 +92,12 @@ void gf_cleanup_pwr_list(struct gf_dev* gf_dev) {
     unsigned index = 0;
     pr_info("%s cleanup power list", __func__);
     for (index = 0; index < gf_dev->power_num; index++) {
+        if (gf_dev->pwr_list[index].pwr_type == FP_POWER_MODE_GPIO) {
+            if (gpio_is_valid(gf_dev->irq_gpio)) {
+                gpio_free(gf_dev->pwr_list[index].pwr_gpio);
+                pr_info("remove pwr_gpio success\n");
+            }
+        }
         if (gf_dev->pwr_list[index].pwr_type == FP_POWER_MODE_LDO)
             memset(&(gf_dev->pwr_list[index]), 0, sizeof(fp_power_info_t));
     }
@@ -261,6 +252,7 @@ int gf_parse_dts(struct gf_dev* gf_dev)
     gf_dev->pstate_cs_func = NULL;
     gf_dev->pstate_irq_no_pull = NULL;
     gf_dev->is_optical = true;
+    g_cs_gpio_disable = 0;
 
 	node = of_find_compatible_node(NULL, NULL, "goodix,goodix_fp");
 	if (node) {
@@ -275,13 +267,19 @@ int gf_parse_dts(struct gf_dev* gf_dev)
     }
 
     /*determine if it's optical*/
-    if(FP_GOODIX_5658 == get_fpsensor_type()) { //add new fpsensor if needed
+    if (FP_GOODIX_5658 == get_fpsensor_type() || FP_GOODIX_3626 == get_fpsensor_type()) { //add new fpsensor if needed
         gf_dev->is_optical = false;
     }
     else {
         gf_dev->is_optical = true;
     }
     pr_err("is_optical: %d\n", gf_dev->is_optical);
+
+    rc = of_property_read_u32(node, "gf,cs_gpio_disable", &g_cs_gpio_disable);
+    if (rc) {
+        dev_err(&pdev->dev, "failed to request gf,cs_gpio_disable, ret = %d\n", rc);
+        g_cs_gpio_disable = 0;
+    }
 
     /*get clk pinctrl resource*/
     gf_dev->pinctrl = devm_pinctrl_get(&pdev->dev);
@@ -290,10 +288,12 @@ int gf_parse_dts(struct gf_dev* gf_dev)
         return PTR_ERR(gf_dev->pinctrl);
     }
 
-    gf_dev->pstate_cs_func = pinctrl_lookup_state(gf_dev->pinctrl, "gf_cs_func");
-    if (IS_ERR(gf_dev->pstate_cs_func)) {
-        dev_err(&pdev->dev, "Can't find gf_cs_func pinctrl state\n");
-        return PTR_ERR(gf_dev->pstate_cs_func);
+    if (g_cs_gpio_disable != 1) {
+        gf_dev->pstate_cs_func = pinctrl_lookup_state(gf_dev->pinctrl, "gf_cs_func");
+        if (IS_ERR(gf_dev->pstate_cs_func)) {
+            dev_err(&pdev->dev, "Can't find gf_cs_func pinctrl state\n");
+            return PTR_ERR(gf_dev->pstate_cs_func);
+        }
     }
 
     if(gf_dev->is_optical == true) {
@@ -315,9 +315,10 @@ int gf_parse_dts(struct gf_dev* gf_dev)
         gf_dev->pstate_irq_no_pull = pinctrl_lookup_state(gf_dev->pinctrl, "goodix_irq_no_pull");
         if (IS_ERR(gf_dev->pstate_irq_no_pull)) {
             dev_err(&pdev->dev, "Can't find irq_no_pull pinctrl state\n");
-            return PTR_ERR(gf_dev->pstate_irq_no_pull);
+            // return PTR_ERR(gf_dev->pstate_irq_no_pull);
+        } else {
+            pinctrl_select_state(gf_dev->pinctrl, gf_dev->pstate_irq_no_pull);
         }
-        pinctrl_select_state(gf_dev->pinctrl, gf_dev->pstate_irq_no_pull);
     }
 	/*get reset resource*/
 	gf_dev->reset_gpio = of_get_named_gpio(pdev->dev.of_node, "goodix,gpio_reset", 0);
@@ -337,18 +338,20 @@ int gf_parse_dts(struct gf_dev* gf_dev)
 	msleep(3);
 
     /*get cs resource*/
-    gf_dev->cs_gpio = of_get_named_gpio(pdev->dev.of_node, "goodix,gpio_cs", 0);
-    if (!gpio_is_valid(gf_dev->cs_gpio)) {
-        pr_info("CS GPIO is invalid.\n");
-        return -1;
+    if (g_cs_gpio_disable != 1) {
+        gf_dev->cs_gpio = of_get_named_gpio(pdev->dev.of_node, "goodix,gpio_cs", 0);
+        if (!gpio_is_valid(gf_dev->cs_gpio)) {
+            pr_info("CS GPIO is invalid.\n");
+            return -1;
+        }
+        rc = gpio_request(gf_dev->cs_gpio, "goodix_cs");
+        if (rc) {
+            dev_err(&gf_dev->spi->dev, "Failed to request CS GPIO. rc = %d\n", rc);
+            return -1;
+        }
+        gpio_direction_output(gf_dev->cs_gpio, 0);
+        gf_dev->cs_gpio_set = true;
     }
-    rc = gpio_request(gf_dev->cs_gpio, "goodix_cs");
-    if (rc) {
-        dev_err(&gf_dev->spi->dev, "Failed to request CS GPIO. rc = %d\n", rc);
-        return -1;
-    }
-    gpio_direction_output(gf_dev->cs_gpio, 0);
-    gf_dev->cs_gpio_set = true;
 
     /*get irq resourece*/
     gf_dev->irq_gpio = of_get_named_gpio(pdev->dev.of_node, "goodix,gpio_irq", 0);

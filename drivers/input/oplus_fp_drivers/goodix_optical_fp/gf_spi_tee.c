@@ -1,22 +1,8 @@
-/************************************************************************************
-** File: - fingerprints_hal\drivers\goodix_fp\gf_spi_tee.c
-** OPLUS_FEATURE_FINGERPRINT
-** Copyright (C), 2008-2016, OPLUS Mobile Comm Corp., Ltd
-**
-** Description:
-**      fpc fingerprint kernel device driver
-**
-** Version: 1.0
-** Date created: 15:03:11,12/08/2017
-** TAG: BSP.Fingerprint.Basic
-**
-** --------------------------- Revision History: --------------------------------
-**    <author>     <data>        <desc>
-**    Ran.Chen     2017/08/11    create the file for goodix 3268
-**    Ran.Chen     2017/09/08    add gf_cmd_wakelock
-**    Hongdao.yu  2018/03/09    modify irq/reset/power time sequence 
-**    Dongnan.Wu  2019/02/23    modify for 18073 goodix device
-************************************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
+
 #define pr_fmt(fmt)		KBUILD_MODNAME ": " fmt
 
 #include <linux/init.h>
@@ -106,7 +92,7 @@ static int SPIDEV_MAJOR;
 extern struct clk *globle_spi_clk;
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 struct mtk_spi {
 	void __iomem                                        *base;
 	void __iomem                                        *peri_regs;
@@ -120,6 +106,20 @@ struct mtk_spi {
 	u32                                                 tx_sgl_len, rx_sgl_len;
 	const struct mtk_spi_compatible                     *dev_comp;
 	u32                                                 dram_8gb_offset;
+};
+#elif (LINUX_VERSION_CODE == KERNEL_VERSION(4, 14, 0))
+struct mtk_spi {
+    void __iomem *base;
+    u32 state;
+    int pad_num;
+    u32 *pad_sel;
+    struct clk *parent_clk, *sel_clk, *spi_clk;
+    struct spi_transfer *cur_transfer;
+    u32 xfer_len;
+    u32 num_xfered;
+    struct scatterlist *tx_sgl, *rx_sgl;
+    u32 tx_sgl_len, rx_sgl_len;
+    const struct mtk_spi_compatible *dev_comp;
 };
 #else
 struct mtk_spi {
@@ -161,6 +161,8 @@ struct gf_key_map maps[] = {
 	{ EV_KEY, GF_NAV_INPUT_HEAVY },
 #endif
 };
+
+static int gf_opticalfp_irq_handler(struct fp_underscreen_info *tp_info);
 
  static void gf_spi_clk_enable(struct gf_dev *gf_dev)
  {
@@ -995,7 +997,7 @@ static int gf_remove(struct platform_device *pdev)
 
 static struct of_device_id gx_match_table[] = {
 	{ .compatible = GF_SPIDEV_NAME },
-	{ .compatible = OPLUS_SPIDEV_NAME },
+    { .compatible = OPLUS_SPIDEV_NAME },
 	{},
 };
 

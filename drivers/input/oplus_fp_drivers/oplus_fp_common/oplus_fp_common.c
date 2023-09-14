@@ -1,56 +1,11 @@
-/************************************************************************************
- ** File: - SDM670.LA.1.0\android\kernel\msm-4.4\drivers\soc\oplus\oplus_fp_common\oplus_fp_common.c
- ** OPLUS_FEATURE_FINGERPRINT
- ** Copyright (C), 2008-2020, OPLUS Mobile Comm Corp., Ltd
- **
- ** Description:
- **      fp_common compatibility configuration
- **
- ** Version: 1.0
- ** Date created: 15:03:11,23/05/2018
- **
- ** --------------------------- Revision History: --------------------------------
- **  <author>         <data>         <desc>
- **  Ran.Chen       2018/05/23     create the file,add goodix_optical_95s
- **  Ran.Chen       2018/05/28     add for fpc1023
- **  Ran.Chen       2018/06/15     add for Silead_Optical_fp
- **  Ran.Chen       2018/06/25     modify fpc1023+2060 to fpc1023_glass
- **  Ziqing.Guo     2018/07/12     add Silead_Optical_fp for 18181 18385
- **  Ziqing.Guo     2018/07/13     set silead fp for 18181 18385 at this moment, will modify later
- **  Ran.Chen       2018/08/01     modify for 18385 fp_id
- **  Long.Liu       2018/09/29     add 18531 FPC1023 fp_id
- **  Dongnan.Wu     2018/10/23	   modify for 17081(android P) fp_id
- **  Long.Liu       2018/11/15     modify for 18151 FPC1023_GLASS fp_id
- **  Ran.Chen       2018/11/26     add for SDM855
- **  Yang.Tan       2018/11/09     add for 18531 fpc1511
- **  Long.Liu       2019/01/03     add for 18161 fpc1511
- **  Bangxiong.wu   2019/01/24     add for 18073 silead_optical_fp
- **  Long.Liu       2019/02/01     add for 18561 GOODIX GF5658_FP
- **  Ziqing.Guo     2019/02/12     fix coverity error 64261,64267 to avoid buffer overflow
- **  Dongnan.Wu     2019/01/28     add for 18073 goodix optical fingerprint
- **  Bangxiong.wu   2019/02/24     add for 18593 silead_optical_fp
- **  Qing.Guan      2019/04/01     add for egis et711 fp
- **  Hongyu.lu      2019/04/18     add for 19021 fpc1511
- **  Hongyu.lu      2019/04/18     add for 19321 19026 fpc1511
- **  Long.Liu       2019/05/08     add for 17085(android P) fp_id
- **  Qing.Guan      2019/05/08     add for 18081 silead fp O to P
- **  Bangxiong.Wu   2019/05/10     add for SM7150 (MSM_19031 MSM_19331)
- **  Bangxiong.Wu   2019/05/16     enable optical GF irq handle for SM7150(MSM_19031 MSM_19331)
- **  Dongnan.Wu     2019/05/21     add for 19011&19301 platform
- **  Hongyu.lu      2019/05/24     add for 19328 platform
- **  Ziqing.Guo     2019/07/17     add for Euclid
- **  Ziqing.Guo     2019/07/18     add for boundary condition check
- **  Ziqing.Guo     2019/07/19     add for compatible no fingerprint id pin
- **  oujinrong      2019/09/19     fix coverity 793768 795805
- **  liudingtong    2019/09/29     add for 18085Q silead_optical_fp
- **  Ran.Chen       2019/10/15     add for /proc/lcd_type
- **  Bangxiong.Wu   2020/02/06     optimize fp_gpio mapping rule
- **  Bangxiong.Wu   2020/08/10     decoupling opticalfp_irq_handler function
- ************************************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #include <linux/module.h>
 #include <linux/proc_fs.h>
-#include <soc/oplus/oplus_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 #include <linux/fs.h>
@@ -61,6 +16,7 @@
 #include <linux/mutex.h>
 #include <soc/oplus/touchpanel_event_notify.h>
 #include "../include/oplus_fp_common.h"
+//extern char *saved_command_line;
 
 #if defined(MTK_PLATFORM)
 // #include <sec_boot_lib.h>
@@ -71,13 +27,17 @@
 #include <soc/qcom/smem.h>
 #endif
 
+#ifdef FP_TEE_BINDE_CORE_ENABLE
+#include "mc_linux_api.h"
+#endif
+
 #define FP_GPIO_PREFIX_NODE    "oplus,fp_gpio_"
 #define FP_GPIO_NUM_NODE       "oplus,fp_gpio_num"
 #define FP_ID_VALUE_NODE       "oplus,fp-id"
 #define FP_VENDOR_CHIP_NODE    "vendor-chip"
 #define FP_CHIP_NAME_NODE      "chip-name"
 #define FP_ENG_MENU_NODE       "eng-menu"
-
+#define TEE_BIND_CORE       "tee_bind_bigcore"
 #define CHIP_UNKNOWN           "unknown"
 #define ENGINEER_MENU_DEFAULT  "-1,-1"
 
@@ -103,9 +63,6 @@ static int fp_gpio_parse_parent_dts(struct fp_data *fp_data)
     int fp_id_index = 0;
     struct device *dev = NULL;
     struct device_node *np = NULL;
-	struct pinctrl *fp_id_pinctrl = NULL;
-	struct pinctrl_state *fp_id_pull_id0 = NULL;
-	int one_for_three = 0;
 
     if (!fp_data || !fp_data->dev) {
         ret = -FP_ERROR_GENERAL;
@@ -129,27 +86,6 @@ static int fp_gpio_parse_parent_dts(struct fp_data *fp_data)
 
     dev_info(fp_data->dev, "fp_id_amount: %d\n", fp_data->fp_id_amount);
 
-	ret = of_property_read_u32(np, "oplus,one_gpio_for_three_ic", &one_for_three);
-	if (ret) {
-        dev_err(fp_data->dev, "oplus,one_gpio_for_three_ic is not define\n");
-        ret = FP_OK;
-	}
-	if (one_for_three == 1) {
-	    fp_id_pinctrl = devm_pinctrl_get(fp_data->dev);
-	    if (IS_ERR_OR_NULL(fp_id_pinctrl)) {
-	        dev_err(fp_data->dev, "falied to get pinctr handle\n");
-	        return -FP_ERROR_GENERAL;
-	    }
-
-	    fp_id_pull_id0 = pinctrl_lookup_state(fp_id_pinctrl, "gpio_id0_default");
-	    if (IS_ERR_OR_NULL(fp_id_pull_id0)) {
-	        dev_err(fp_data->dev, "falied to find pinctrl fp_id_pull_id1!\n");
-	        goto exit;
-	    }
-
-	    pinctrl_select_state(fp_id_pinctrl, fp_id_pull_id0);
-	    dev_err(fp_data->dev, "success to select id0!\n");
-	}
     for (fp_id_index = 0; fp_id_index < fp_data->fp_id_amount; fp_id_index++) {
         char fp_gpio_current_node[FP_ID_MAX_LENGTH] = {0};
         snprintf(fp_gpio_current_node, FP_ID_MAX_LENGTH - 1, "%s%d", FP_GPIO_PREFIX_NODE, fp_id_index);
@@ -235,22 +171,22 @@ static int opticalfp_irq_handler(struct fp_underscreen_info *tp_info) {
 }
 
 static int opticalfp_touch_event_notify(struct notifier_block *self, unsigned long action, void *data) {
-	struct touchpanel_event *event = (struct touchpanel_event*)data;
-	if (event) {
-		if (action == EVENT_ACTION_FOR_FINGPRINT) {
-			struct fp_underscreen_info tp_info;
-			tp_info.touch_state = (uint8_t)event->touch_state;
-			tp_info.area_rate = (uint8_t)event->area_rate;
-			tp_info.x = (uint16_t)event->x;
-			tp_info.y = (uint16_t)event->y;
-			opticalfp_irq_handler(&tp_info);
-		}
-	}
-	return NOTIFY_OK;
+    struct touchpanel_event *event = (struct touchpanel_event *)data;
+    if (event) {
+        if (action == EVENT_ACTION_FOR_FINGPRINT) {
+            struct fp_underscreen_info tp_info;
+            tp_info.touch_state = (uint8_t)event->touch_state;
+            tp_info.area_rate = (uint8_t)event->area_rate;
+            tp_info.x = (uint16_t)event->x;
+            tp_info.y = (uint16_t)event->y;
+            opticalfp_irq_handler(&tp_info);
+        }
+    }
+    return NOTIFY_OK;
 }
 
 struct notifier_block _input_event_notifier = {
-	.notifier_call = opticalfp_touch_event_notify,
+    .notifier_call = opticalfp_touch_event_notify,
 };
 
 static int fp_gpio_parse_child_dts(struct fp_data *fp_data)
@@ -364,7 +300,7 @@ exit :
 }
 
 void read_lcd_type_proc_data(void) {
-    strncpy(lcd_manu, "samsung", FP_ID_MAX_LENGTH - 1);
+        strncpy(lcd_manu, "samsung", FP_ID_MAX_LENGTH - 1);
 }
 
 static ssize_t lcd_type_node_read(struct file *file, char __user *buf, size_t count, loff_t *pos) {
@@ -395,6 +331,46 @@ static struct file_operations lcd_type_node_ctrl = {
     .write = NULL,
 };
 
+
+static ssize_t fp_tee_node_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
+{
+    char fp_state[32] = {'\0'};
+    if (copy_from_user(fp_state, buf, count) != 0) {
+        dev_err(fp_data_ptr->dev, "write fp manu value fail\n");
+        return -EFAULT;
+    }
+    dev_err(fp_data_ptr->dev, "fp write state, %s\n", (char *)fp_state);
+#ifdef FP_TEE_BINDE_CORE_ENABLE
+    if (fp_state[0] == '0') {
+        fp_bind_tee_core(false);
+    } else {
+        fp_bind_tee_core(true);
+    }
+#endif
+    return count;
+}
+
+static struct file_operations tee_bind_func = {
+    .write = fp_tee_node_write,
+    .read = NULL,
+};
+
+static int teecore_register_proc_fs(void)
+{
+    int ret = FP_OK;
+    char *tee_node = "tee_bind_core";
+    struct proc_dir_entry *tee_node_dir = NULL;
+
+    tee_node_dir = proc_create(tee_node, 0666, NULL, &tee_bind_func);
+    if (tee_node_dir == NULL) {
+        ret = -FP_ERROR_GENERAL;
+        goto exit;
+    }
+
+    return FP_OK;
+exit :
+    return ret;
+}
 
 static int lcd_type_register_proc_fs(void)
 {
@@ -465,12 +441,16 @@ static int oplus_fp_common_probe(struct platform_device *fp_dev)
         goto exit;
     }
 
-	ret = touchpanel_event_register_notifier(&_input_event_notifier);
-	if (ret < 0) {
-		dev_err(dev, "Touch Event Registration failed: %d\n", ret);
-		goto exit;
-	}
+    ret = touchpanel_event_register_notifier(&_input_event_notifier);
+    if (ret < 0) {
+        dev_err(dev, "Touch Event Registration failed: %d\n", ret);
+        goto exit;
+    }
 
+    ret = teecore_register_proc_fs();
+    if (ret) {
+        goto exit;
+    }
     return FP_OK;
 
 exit:
@@ -493,7 +473,7 @@ exit:
 
 static int oplus_fp_common_remove(struct platform_device *pdev)
 {
-	touchpanel_event_unregister_notifier(&_input_event_notifier);
+    touchpanel_event_unregister_notifier(&_input_event_notifier);
     return FP_OK;
 }
 
@@ -524,6 +504,5 @@ static void __exit oplus_fp_common_exit(void)
 
 subsys_initcall(oplus_fp_common_init);
 module_exit(oplus_fp_common_exit)
-
 MODULE_DESCRIPTION("oplus fingerprint common driver");
 MODULE_LICENSE("GPL");

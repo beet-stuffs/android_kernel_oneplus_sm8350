@@ -38,7 +38,6 @@
 #include "oplus_mp2650.h"
 #include "../gauge_ic/oplus_bq27541.h"
 #include "../gauge_ic/oplus_sm5602.h"
-#include "../wireless_ic/oplus_ra9530.h"
 #include "../oplus_adapter.h"
 #include "../oplus_pps.h"
 #include "../oplus_configfs.h"
@@ -71,8 +70,6 @@ int sgm41511_charger_init(void);
 void sgm41511_charger_exit(void);
 int sgm41512_charger_init(void);
 void sgm41512_charger_exit(void);
-int ra9530_driver_init(void);
-void ra9530_driver_exit(void);
 int rt_pd_manager_init(void);
 void rt_pd_manager_exit(void);
 int adapter_ic_init(void);
@@ -2825,7 +2822,6 @@ static int __init discrete_charger_init(void)
 	sy6970_charger_init();
 	sgm41511_charger_init();
 	sgm41512_charger_init();
-	ra9530_driver_init();
 	mp2650_driver_init();
 	sgm7220_i2c_init();
 
@@ -2846,7 +2842,6 @@ static void __exit discrete_charger_exit(void)
 	sgm7220_i2c_exit();
 	mp2650_driver_exit();
 	sy6970_charger_exit();
-	ra9530_driver_exit();
 	sgm41512_charger_exit();
 	sgm41511_charger_exit();
 	sy6974b_charger_exit();

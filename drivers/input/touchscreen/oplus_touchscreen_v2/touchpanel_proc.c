@@ -37,8 +37,17 @@
 
 /*******Part2:declear Area********************************/
 #ifndef CONFIG_REMOVE_OPLUS_FUNCTION
-extern int register_devinfo(char *name, struct manufacture_info *info);
-extern int register_device_proc(char *name, char *version, char *manufacture);
+/* extern int register_devinfo(char *name, struct manufacture_info *info); */
+/* extern int register_device_proc(char *name, char *version, char *manufacture); */
+int __attribute__((weak)) register_device_proc(char *name, char *version, char *vendor)
+{
+	return 0;
+}
+
+int __attribute__((weak)) register_devinfo(char *name, struct manufacture_info *info)
+{
+	return 0;
+}
 #endif
 
 extern bool is_ftm_boot_mode(struct touchpanel_data *ts);
