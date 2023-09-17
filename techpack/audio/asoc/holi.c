@@ -42,6 +42,14 @@
 #include "holi-port-config.h"
 #include "msm_holi_dailink.h"
 
+#ifdef OPLUS_FEATURE_AUDIO_FTM
+#include "dailink_extends.h"
+#endif /* OPLUS_FEATURE_AUDIO_FTM */
+
+//#ifdef OPLUS_ARCH_EXTENDS
+#include "codecs/sia81xx/sia81xx_aux_dev_if.h"
+//#endif /* OPLUS_ARCH_EXTENDS */
+
 #define DRV_NAME "holi-asoc-snd"
 #define __CHIPSET__ "HOLI "
 #define MSM_DAILINK_NAME(name) (__CHIPSET__#name)
@@ -73,7 +81,11 @@
 #define CODEC_EXT_CLK_RATE          9600000
 #define ADSP_STATE_READY_TIMEOUT_MS 3000
 #define DEV_NAME_STR_LEN            32
+#ifndef OPLUS_ARCH_EXTENDS
 #define WCD_MBHC_HS_V_MAX           1600
+#else /* OPLUS_ARCH_EXTENDS */
+#define WCD_MBHC_HS_V_MAX           1700 //lile add
+#endif /* OPLUS_ARCH_EXTENDS */
 
 #define TDM_CHANNEL_MAX		8
 #define DEV_NAME_STR_LEN	32
@@ -730,7 +742,11 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *);
 static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
+	#ifndef OPLUS_ARCH_EXTENDS
 	.detect_extn_cable = true,
+	#else /* OPLUS_ARCH_EXTENDS */
+	.detect_extn_cable = false,
+	#endif /* OPLUS_ARCH_EXTENDS */
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
@@ -747,7 +763,11 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.mbhc_micbias = MIC_BIAS_2,
 	.anc_micbias = MIC_BIAS_2,
 	.enable_anc_mic_detect = false,
+	#ifndef OPLUS_ARCH_EXTENDS
 	.moisture_duty_cycle_en = true,
+	#else /* OPLUS_ARCH_EXTENDS */
+	.moisture_duty_cycle_en = false,
+	#endif /* OPLUS_ARCH_EXTENDS */
 };
 
 /* set audio task affinity to core 1 & 2 */
@@ -4756,6 +4776,7 @@ static void *def_wcd_mbhc_cal(void)
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
+	#ifndef OPLUS_ARCH_EXTENDS
 	btn_high[0] = 75;
 	btn_high[1] = 150;
 	btn_high[2] = 237;
@@ -4764,6 +4785,16 @@ static void *def_wcd_mbhc_cal(void)
 	btn_high[5] = 500;
 	btn_high[6] = 500;
 	btn_high[7] = 500;
+	#else /* OPLUS_ARCH_EXTENDS */
+	btn_high[0] = 130;		/* Hook ,0 ~ 160 Ohm*/
+	btn_high[1] = 131;
+	btn_high[2] = 253;		/* Volume + ,160 ~ 360 Ohm*/
+	btn_high[3] = 425;		/* Volume - ,360 ~ 680 Ohm*/
+	btn_high[4] = 426;
+	btn_high[5] = 426;
+	btn_high[6] = 426;
+	btn_high[7] = 426;
+	#endif /* OPLUS_ARCH_EXTENDS */
 
 	return wcd_mbhc_cal;
 }
@@ -5191,6 +5222,9 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.name = "TX3_CDC_DMA Hostless",
 		.stream_name = "TX3_CDC_DMA Hostless",
 		.dynamic = 1,
+		#ifdef OPLUS_FEATURE_AUDIO_FTM
+		.dpcm_playback = 1,
+		#endif /* OPLUS_FEATURE_AUDIO_FTM */
 		.dpcm_capture = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			    SND_SOC_DPCM_TRIGGER_POST},
@@ -5327,6 +5361,9 @@ static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(afepcm_tx1),
 	},
+	#ifdef OPLUS_FEATURE_AUDIO_FTM
+	TX_CDC_DMA_HOSTLESS_DAILINK("TX4_CDC_DMA Hostless", "TX4_CDC_DMA Hostless", tx4_cdcdma_hostless),
+	#endif /* OPLUS_FEATURE_AUDIO_FTM */
 };
 
 static struct snd_soc_dai_link msm_common_be_dai_links[] = {
@@ -6666,6 +6703,10 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	int ret = 0;
 	uint index = 0;
 	struct clk *lpass_audio_hw_vote = NULL;
+	#ifdef OPLUS_ARCH_EXTENDS
+	const char *pa_name = NULL;
+	const char *oplus_speaker_type = "oplus,speaker-pa";
+	#endif /* OPLUS_ARCH_EXTENDS */
 
 	if (!pdev->dev.of_node) {
 		dev_err(&pdev->dev,
@@ -6712,6 +6753,20 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		ret = -EPROBE_DEFER;
 		goto err;
 	}
+
+//#ifdef OPLUS_ARCH_EXTENDS
+	ret = of_property_read_string(pdev->dev.of_node, oplus_speaker_type,
+									&pa_name);
+	if (!ret && !strcmp(pa_name, "sia81xx")) {
+		ret = soc_aux_init_only_sia81xx(pdev, card);
+		if (ret) {
+			pr_err("%s soc_aux_init_only_sia81xx return error.\n", __func__);
+			goto err;
+		}
+	} else {
+		pr_err("%s not use aux sia81xx smartPA.\n", __func__);
+	}
+//#endif /* OPLUS_ARCH_EXTENDS */
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret == -EPROBE_DEFER) {
