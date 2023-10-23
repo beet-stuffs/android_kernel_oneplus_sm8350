@@ -2607,12 +2607,14 @@ static u32 ilitek_trigger_reason(void *chip_data, int gesture_enable,
 		return IRQ_IGNORE;
 	}
 
+# if 0
 	/*ignore first irq after hw rst pin reset*/
 	if (ilits->ignore_first_irq) {
 		ILI_INFO("ignore_first_irq\n");
 		ilits->ignore_first_irq = false;
 		return IRQ_IGNORE;
 	}
+#endif
 
 	if (!chip_info->fw_update_stat || !ilits->report
 			|| atomic_read(&ilits->tp_reset) ||
