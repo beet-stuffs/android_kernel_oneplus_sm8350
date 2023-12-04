@@ -168,14 +168,20 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	struct nqx_dev *nqx_dev = dev_id;
 	unsigned long flags;
 
+	pr_info("%s: Enter\n", __func__);
 	if (device_may_wakeup(&nqx_dev->client->dev))
 		pm_wakeup_event(&nqx_dev->client->dev, WAKEUP_SRC_TIMEOUT);
 
+    pr_info("%s: nqx_disable_irq\n", __func__);
 	nqx_disable_irq(nqx_dev);
 	spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
 	nqx_dev->count_irq++;
 	spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
+
+    pr_info("%s: wake_up\n", __func__);
 	wake_up(&nqx_dev->read_wq);
+
+	pr_info("%s: Exit\n", __func__);
 
 	return IRQ_HANDLED;
 }
@@ -391,13 +397,28 @@ out:
 	return ret;
 }
 
+int cmdcmp(const char *tmp1, const char *tmp2, size_t count)
+{
+	int i;
+	for (i = 0; i < count; i++) {
+		if (tmp1[i] != tmp2[i]) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
 static ssize_t nfc_write(struct file *filp, const char __user *buf,
 				size_t count, loff_t *offset)
 {
 	struct nqx_dev *nqx_dev = filp->private_data;
 	char *tmp = NULL;
 	char wakeup_cmd[1] = {0};
-
+	const char on_unlocked[] = {0x20, 0x09, 0x01, 0x00};
+	const char on_locked[] = {0x20, 0x09, 0x01, 0x02};
+	const char off_locked[] = {0x20, 0x09, 0x01, 0x03};
+	const char polling_disabled[] = {0x20, 0x02, 0x04, 0x01, 0x02, 0x01, 0x00};
+	const char deactivate[] = {0x21, 0x06, 0x01, 0x00};
 	int ret = 0;
 	int retrycount = 0;
 
@@ -420,16 +441,33 @@ static ssize_t nfc_write(struct file *filp, const char __user *buf,
 		goto out;
 	}
 
-	while (++retrycount < 6) {
+	if (cmdcmp(tmp, on_unlocked, sizeof(on_unlocked)) == 0
+		||cmdcmp(tmp, on_locked, sizeof(on_locked)) == 0
+		||cmdcmp(tmp, off_locked, sizeof(off_locked)) == 0
+		||cmdcmp(tmp, deactivate, sizeof(deactivate)) == 0
+		||cmdcmp(tmp, polling_disabled, sizeof(polling_disabled)) == 0) {
 		ret = i2c_master_send(nqx_dev->client, wakeup_cmd, 1);
-		if (ret >= 0) {
-			break;
+		if (ret < 0) {
+		    dev_err(&nqx_dev->client->dev,
+		        "%s: failed to write wakeup_cmd %d, retry again\n", __func__, ret);
+		    /*wake up cmd maybe not write successfully, retry to wake up*/
+		    while (retrycount++ < 6) {
+		        usleep_range(5000, 5100);
+		        ret = i2c_master_send(nqx_dev->client, wakeup_cmd, 1);
+		        if (ret >= 0) {
+		            dev_err(&nqx_dev->client->dev,
+		                "%s: succeed to write wakeup_cmd\n", __func__);
+		            break;
+		        } else {
+		           dev_err(&nqx_dev->client->dev,
+		               "%s: failed to write wakeup_cmd %d, retry for %d times\n", __func__, ret, retrycount + 1);
+		        }
+		    }
+		} else {
+		    dev_err(&nqx_dev->client->dev,
+		        "%s: succeed to write wakeup_cmd\n", __func__);
 		}
 		usleep_range(5000, 5100);
-	}
-	if (ret < 0) {
-		dev_err(&nqx_dev->client->dev,
-			"%s: failed to write wakeup_cmd : %d, retry for : %d times\n", __func__, ret, retrycount);
 	}
 
 	ret = i2c_master_send(nqx_dev->client, tmp, count);
@@ -445,7 +483,6 @@ static ssize_t nfc_write(struct file *filp, const char __user *buf,
 			__func__, iminor(file_inode(filp)),
 			tmp[0], tmp[1], tmp[2]);
 #endif
-
 	usleep_range(1000, 1100);
 out_free:
 	kfree(tmp);
@@ -530,7 +567,7 @@ static int sn100_ese_pwr(struct nqx_dev *nqx_dev, unsigned long arg)
 			dev_dbg(&nqx_dev->client->dev, "NFC not enabled, disabling en_gpio\n");
 			gpio_set_value(nqx_dev->en_gpio, 0);
 			/* hardware dependent delay */
-			usleep_range(1000, 1100);
+			usleep_range(10000, 10100);
 		} else {
 			dev_dbg(&nqx_dev->client->dev, "keep en_gpio high as NFC is enabled\n");
 		}
@@ -687,9 +724,11 @@ static int nqx_ese_pwr(struct nqx_dev *nqx_dev, unsigned long arg)
 
 		if (!nqx_dev->nfc_ven_enabled) {
 			/* hardware dependent delay */
-			usleep_range(1000, 1100);
+			usleep_range(10000, 10100);
 			dev_dbg(&nqx_dev->client->dev, "disabling en_gpio\n");
-			gpio_set_value(nqx_dev->en_gpio, 0);
+			gpio_set_value(nqx_dev->en_gpio, 0);/* ULPM: Disable */
+			/* hardware dependent delay */
+			usleep_range(10000, 10000 + 100);
 		}
 	} else if (arg == 3) {
 		r = gpio_get_value(nqx_dev->ese_gpio);
@@ -881,7 +920,7 @@ static int nfc_close(struct inode *inode, struct file *filp)
  *
  * Return: -ENOIOCTLCMD if arg is not supported, 0 in any other case
  */
-int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
+static int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
 {
 	int r = 0;
 	struct nqx_dev *nqx_dev = filp->private_data;
@@ -1245,16 +1284,19 @@ static int nfcc_hw_check(struct i2c_client *client, struct nqx_dev *nqx_dev)
 	}
 
 reset_enable_gpio:
+        /* wait ven timing sequence which is required by nxp chipSet */
+        usleep_range(20000, 20000 + 100);
+
 	/* making sure that the NFCC starts in a clean state. */
 	gpio_set_value(enable_gpio, 1);/* HPD : Enable*/
 	/* hardware dependent delay */
-	usleep_range(10000, 10100);
+        usleep_range(20000, 20000 + 100);
 	gpio_set_value(enable_gpio, 0);/* ULPM: Disable */
 	/* hardware dependent delay */
-	usleep_range(10000, 10100);
+        usleep_range(20000, 20000 + 100);
 	gpio_set_value(enable_gpio, 1);/* HPD : Enable*/
 	/* hardware dependent delay */
-	usleep_range(10000, 10100);
+        usleep_range(20000, 20000 + 100);
 
 	nci_reset_cmd[0] = 0x20;
 	nci_reset_cmd[1] = 0x00;
@@ -1428,16 +1470,18 @@ done:
     }
 
 reset_enable_gpio:
+	/* wait ven timing sequence which is required by nxp chipSet */
+	usleep_range(20000, 20000 + 100);
     gpio_set_value(firm_gpio, 1);
     /* hardware dependent delay */
-    usleep_range(10000, 10100);
+	usleep_range(20000, 20000 + 100);
     /* making sure that the NFCC starts in a clean state. */
     gpio_set_value(enable_gpio, 0);/* ULPM: Disable */
     /* hardware dependent delay */
-    usleep_range(10000, 10100);
+	usleep_range(20000, 20000 + 100);
     gpio_set_value(enable_gpio, 1);/* HPD : Enable*/
     /* hardware dependent delay */
-    usleep_range(10000, 10100);
+	usleep_range(20000, 20000 + 100);
 
     nci_get_fw_cmd[0] = 0x00;
     nci_get_fw_cmd[1] = 0x04;
@@ -1482,7 +1526,9 @@ err_nfcc_hw_check:
 done:
     gpio_set_value(firm_gpio, 0);
     /* make sure NFCC is not enabled */
-    gpio_set_value(enable_gpio, 0);
+        gpio_set_value(enable_gpio, 0);/* ULPM: Disable */
+        /* hardware dependent delay */
+        usleep_range(10000, 10000 + 100);
     kfree(nci_get_fw_rsp);
     kfree(nci_get_fw_cmd);
 #endif /* OPLUS_BUG_STABILITY */
@@ -1619,9 +1665,9 @@ static int nqx_probe(struct i2c_client *client,
 	struct nqx_platform_data *platform_data;
 	struct nqx_dev *nqx_dev;
 
-	//#ifdef OPLUS_FEATURE_NFC_BRINGUP
+	//#ifdef OPLUS_FEATURE_CONNFCSOFT
 	CHECK_NFC_CHIP(SN100T);
-	//#endif /* OPLUS_FEATURE_NFC_BRINGUP */
+	//#endif /* OPLUS_FEATURE_CONNFCSOFT */
 
 	dev_dbg(&client->dev, "%s: enter\n", __func__);
 	if (client->dev.of_node) {
@@ -1859,7 +1905,9 @@ static int nqx_probe(struct i2c_client *client,
 	if (r) {
 		#ifndef OPLUS_BUG_STABILITY
 		/* make sure NFCC is not enabled */
-		gpio_set_value(platform_data->en_gpio, 0);
+		gpio_set_value(platform_data->en_gpio, 0);/* ULPM: Disable */
+		/* hardware dependent delay */
+		usleep_range(10000, 10000 + 100);
 		/* We don't think there is hardware switch NFC OFF */
 		goto err_request_hw_check_failed;
 		#endif /* OPLUS_BUG_STABILITY */

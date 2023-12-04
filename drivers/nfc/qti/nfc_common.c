@@ -188,7 +188,7 @@ void gpio_set_ven(struct nfc_dev *nfc_dev, int value)
 	if (gpio_get_value(nfc_dev->gpio.ven) != value) {
 		gpio_set_value(nfc_dev->gpio.ven, value);
 		// hardware dependent delay
-		usleep_range(10000, 10100);
+		usleep_range(NFC_GPIO_SET_WAIT_TIME_USEC, NFC_GPIO_SET_WAIT_TIME_USEC + 100);
 	}
 }
 
@@ -712,6 +712,29 @@ int nfc_dev_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+int nfc_dev_flush(struct file *pfile, fl_owner_t id)
+{
+	struct nfc_dev *nfc_dev = pfile->private_data;
+
+	if (!nfc_dev)
+		return -ENODEV;
+	/*
+	 * release blocked user thread waiting for pending read during close
+	 */
+	if (!mutex_trylock(&nfc_dev->read_mutex)) {
+		nfc_dev->release_read = true;
+		nfc_dev->nfc_disable_intr(nfc_dev);
+		wake_up(&nfc_dev->read_wq);
+		pr_debug("%s: waiting for release of blocked read\n", __func__);
+		mutex_lock(&nfc_dev->read_mutex);
+		nfc_dev->release_read = false;
+	} else {
+		pr_debug("%s: read thread already released\n", __func__);
+	}
+	mutex_unlock(&nfc_dev->read_mutex);
+	return 0;
+}
+
 int nfc_dev_close(struct inode *inode, struct file *filp)
 {
 	struct nfc_dev *nfc_dev = container_of(inode->i_cdev,
@@ -803,6 +826,7 @@ int nfcc_hw_check(struct nfc_dev *nfc_dev)
 		nfc_dev->nfc_enable_intr(nfc_dev);
 	else {
 		/* making sure that the NFCC starts in a clean state. */
+		usleep_range(NFC_GPIO_SET_WAIT_TIME_USEC,NFC_GPIO_SET_WAIT_TIME_USEC + 100);//add for Satisfy VEN spec of  15ms delay
 		gpio_set_ven(nfc_dev, 1);/* HPD : Enable*/
 		gpio_set_ven(nfc_dev, 0);/* ULPM: Disable */
 		gpio_set_ven(nfc_dev, 1);/* HPD : Enable*/

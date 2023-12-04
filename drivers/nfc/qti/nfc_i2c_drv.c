@@ -173,6 +173,20 @@ ssize_t nfc_i2c_dev_read(struct file *filp, char __user *buf,
 				goto err;
 			}
 
+			/*
+			 * NFC service wanted to close the driver so,
+			 * release the calling reader thread asap.
+			 *
+			 * This can happen in case of nfc node close call from
+			 * eSE HAL in that case the NFC HAL reader thread
+			 * will again call read system call
+			 */
+			if (nfc_dev->release_read) {
+				pr_debug("%s: releasing read\n", __func__);
+				mutex_unlock(&nfc_dev->read_mutex);
+				return 0;
+			}
+
 			pr_warn("%s: spurious interrupt detected\n", __func__);
 		}
 	}
@@ -264,6 +278,7 @@ static const struct file_operations nfc_i2c_dev_fops = {
 	.read = nfc_i2c_dev_read,
 	.write = nfc_i2c_dev_write,
 	.open = nfc_dev_open,
+	.flush = nfc_dev_flush,
 	.release = nfc_dev_close,
 	.unlocked_ioctl = nfc_dev_ioctl,
 };
@@ -277,12 +292,6 @@ int nfc_i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct platform_ldo nfc_ldo;
 
 	pr_debug("%s: enter\n", __func__);
-
-	//#ifdef OPLUS_FEATURE_NFC_BRINGUP
-        #if IS_ENABLED(CONFIG_OPLUS_NFC)
-	CHECK_NFC_CHIP(SN100T);
-	#endif
-	//#endif /* OPLUS_FEATURE_NFC_BRINGUP */
 
 	//retrieve details of gpios from dt
 
@@ -374,15 +383,9 @@ int nfc_i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	ret = nfcc_hw_check(nfc_dev);
 	if (ret) {
-		#ifndef OPLUS_BUG_STABILITY
 		pr_err("nfc hw check failed ret %d\n", ret);
-		//goto err_nfcc_hw_check;
-		#endif /* OPLUS_BUG_STABILITY */
+		goto err_nfcc_hw_check;
 	}
-
-	#ifdef OPLUS_BUG_STABILITY
-	nfc_dev->nqx_info.info.chip_type = NFCC_SN100_B;
-	#endif /* OPLUS_BUG_STABILITY */
 
 	device_init_wakeup(&client->dev, true);
 	i2c_dev->irq_wake_up = false;
@@ -391,6 +394,11 @@ int nfc_i2c_dev_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	pr_info("%s success\n", __func__);
 	return 0;
 
+err_nfcc_hw_check:
+	if (nfc_dev->reg) {
+		nfc_ldo_unvote(nfc_dev);
+		regulator_put(nfc_dev->reg);
+	}
 err_ldo_config_failed:
 	free_irq(client->irq, nfc_dev);
 err_nfc_misc_remove:

@@ -16,6 +16,7 @@
 #include <linux/io.h>
 #include <stdbool.h>
 
+
 #include "oplus_nfc.h"
 
 #define NFC_CHIPSET_VERSION (0x1)
@@ -27,12 +28,11 @@ static bool support_nfc = false;
 extern char prj_name[];
 
 int get_project_in_gki_mode() {
-        pr_err("prj_name from cmdline : %s\n", prj_name);
+        pr_err("prj_name from cmdline : %s\n",prj_name);
 
-	return simple_strtol(prj_name, NULL, 10);
+	return simple_strtol(prj_name, NULL, 16);
 }
 #endif
-
 
 bool is_nfc_support(void)
 {
@@ -60,8 +60,11 @@ bool is_support_chip(chip_type chip)
 	case SN100F:
 		target_chipset = "SN100F";
 		break;
+	case SN110T:
+		target_chipset = "SN100T|SN110T";
+		break;
 	case ST21H:
-		target_chipset = "ST21H|ST54H";
+		target_chipset = "ST21H";
 		break;
 	case ST54H:
 		target_chipset = "ST54H";
@@ -116,6 +119,7 @@ static int oplus_nfc_probe(struct platform_device *pdev)
 	struct device_node *np;
 	struct device* dev;
 	unsigned int project;
+	int operate = 0;
 	char prop_name[32];
 	const char *chipset_node;
 	struct proc_dir_entry *p_entry;
@@ -132,27 +136,46 @@ static int oplus_nfc_probe(struct platform_device *pdev)
 	project = get_project_in_gki_mode();
 	#else
 	project = get_project();
+
 	#endif
+
+	operate = get_Operator_Version();
+	if (operate ==  -EINVAL) {
+		pr_err("%s, get Operator Version failed, operate = %d ", __func__ , operate);
+	}
+	np = dev->of_node;
+
 	/*project name consists of 5-symbol
 	**project contains letters is big then 0x10000 == 65536
 	*/
 	if (project > 0x10000) {
-		snprintf(prop_name, sizeof(prop_name), "chipset-%X", project);
+		sprintf(prop_name, "chipset-%X-%d", project , operate);
 	} else {
-		snprintf(prop_name, sizeof(prop_name), "chipset-%u", project);
+		sprintf(prop_name, "chipset-%u-%d", project , operate);
 	}
 	pr_err("%s, prop to be read = %s", __func__, prop_name);
-	np = dev->of_node;
 
 	if (of_property_read_string(dev->of_node, prop_name, &chipset_node))
 	{
-		snprintf(current_chipset, sizeof(current_chipset), "NULL");
-	} else
-	{
+		if (project > 0x10000) {
+			sprintf(prop_name, "chipset-%X", project);
+		} else {
+			sprintf(prop_name, "chipset-%u", project);
+		}
+		pr_err("%s, prop to be read = %s", __func__, prop_name);
+		if ((of_property_read_string(dev->of_node, prop_name, &chipset_node))) {
+			sprintf(current_chipset, "NULL");
+		} else {
+			pr_err("%s, get chipset_node content = %s", __func__, chipset_node);
+			strcpy(current_chipset, chipset_node);
+			support_nfc = true;
+		}
+	} else {
 		pr_err("%s, get chipset_node content = %s", __func__, chipset_node);
-		strncpy(current_chipset, chipset_node, sizeof(current_chipset));
+		strcpy(current_chipset, chipset_node);
 		support_nfc = true;
 	}
+
 
 	nfc_info = proc_mkdir("oplus_nfc", NULL);
 	if (!nfc_info)
@@ -200,7 +223,6 @@ static struct platform_driver oplus_nfc_driver = {
 
 static int __init oplus_nfc_init(void)
 {
-	pr_err("enter %s", __func__);
 	return platform_driver_register(&oplus_nfc_driver);
 }
 
