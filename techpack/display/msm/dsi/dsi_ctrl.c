@@ -24,16 +24,9 @@
 #include "dsi_pwr.h"
 #include "dsi_catalog.h"
 #include "dsi_panel.h"
+#include "oplus_display_private_api.h"
 
 #include "sde_dbg.h"
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-#include "iris/dsi_iris5_api.h"
-#endif
-
-#ifdef OPLUS_BUG_STABILITY
-#include <soc/oplus/system/oplus_mm_kevent_fb.h>
-#include "../oplus/oplus_display_private_api.h"
-#endif /* OPLUS_BUG_STABILITY */
 
 #define DSI_CTRL_DEFAULT_LABEL "MDSS DSI CTRL"
 
@@ -53,15 +46,6 @@
 		fmt, c->name, ##__VA_ARGS__)
 #define DSI_CTRL_WARN(c, fmt, ...)	DRM_WARN("[msm-dsi-warn]: %s: " fmt,\
 		c ? c->name : "inv", ##__VA_ARGS__)
-
-#ifdef OPLUS_BUG_STABILITY
-#define DSI_CTRL_MM_ERR(c, fmt, ...) \
-	do { \
-		DRM_DEV_ERROR(NULL, "[msm-dsi-error]: %s: "\
-				fmt, c ? c->name : "inv", ##__VA_ARGS__); \
-		mm_fb_display_kevent_named(MM_FB_KEY_RATELIMIT_1H, fmt, ##__VA_ARGS__); \
-	} while(0)
-#endif /* OPLUS_BUG_STABILITY */
 
 struct dsi_ctrl_list_item {
 	struct dsi_ctrl *ctrl;
@@ -423,31 +407,6 @@ static void dsi_ctrl_dma_cmd_wait_for_done(struct work_struct *work)
 					status);
 			DSI_CTRL_WARN(dsi_ctrl,
 					"dma_tx done but irq not triggered\n");
-#ifdef OPLUS_BUG_STABILITY
-			if (dsi_ctrl->irq_info.irq_num != -1) {
-				struct irq_desc *desc = irq_to_desc(dsi_ctrl->irq_info.irq_num);
-				unsigned long flags;
-
-				if (desc) {
-					spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
-					if (dsi_ctrl->irq_info.irq_stat_mask) {
-						if (desc->depth > 0) {
-							DSI_CTRL_WARN(dsi_ctrl, "dsi_ctrl irq depth[%d] Unexpected, repair it\n",desc->depth);
-							enable_irq(dsi_ctrl->irq_info.irq_num);
-						}
-					}
-					spin_unlock_irqrestore(&dsi_ctrl->irq_info.irq_lock, flags);
-				}
-			}
-
-			if (dsi_ctrl->irq_info.irq_stat_refcount[DSI_SINT_CMD_MODE_DMA_DONE] > 1) {
-				DSI_CTRL_WARN(dsi_ctrl, "dsi_ctrl cmd dma done irq stat refcount[%d] Unexpected, repair it\n",
-				dsi_ctrl->irq_info.irq_stat_refcount[DSI_SINT_CMD_MODE_DMA_DONE]);
-				dsi_ctrl_disable_status_interrupt(dsi_ctrl, DSI_SINT_CMD_MODE_DMA_DONE);
-				mm_fb_display_kevent("DisplayDriverID@@405$$", MM_FB_KEY_RATELIMIT_NONE, "dma_tx irq trigger fixup irq status=%x", status);
-			}
-			mm_fb_display_kevent("DisplayDriverID@@413$$", MM_FB_KEY_RATELIMIT_1H, "dma_tx irq trigger err irq status=%x", status);
-#endif
 
 		} else {
 			DSI_CTRL_ERR(dsi_ctrl,
@@ -1092,9 +1051,6 @@ static int dsi_ctrl_enable_supplies(struct dsi_ctrl *dsi_ctrl, bool enable)
 		if (rc < 0) {
 			DSI_CTRL_ERR(dsi_ctrl,
 				"Power resource enable failed, rc=%d\n", rc);
-#ifdef OPLUS_BUG_STABILITY
-			DSI_CTRL_MM_ERR(dsi_ctrl, "DisplayDriverID@@406$$Power resource enable failed, rc=%d\n", rc);
-#endif
 			goto error;
 		}
 
@@ -1103,9 +1059,6 @@ static int dsi_ctrl_enable_supplies(struct dsi_ctrl *dsi_ctrl, bool enable)
 				&dsi_ctrl->pwr_info.host_pwr, true);
 			if (rc) {
 				DSI_CTRL_ERR(dsi_ctrl, "failed to enable host power regs\n");
-#ifdef OPLUS_BUG_STABILITY
-				DSI_CTRL_MM_ERR(dsi_ctrl, "DisplayDriverID@@406$$failed to enable host power regs\n");
-#endif
 				goto error_get_sync;
 			}
 		}
@@ -1318,13 +1271,6 @@ int dsi_message_validate_tx_mode(struct dsi_ctrl *dsi_ctrl,
 
 	if (*flags & DSI_CTRL_CMD_FETCH_MEMORY) {
 		if ((dsi_ctrl->cmd_len + cmd_len + 4) > SZ_4K) {
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-			if (iris_is_chip_supported()) {
-				if ((dsi_ctrl->cmd_len + cmd_len + 4) <= SZ_256K)
-					return rc;
-				DSI_CTRL_ERR(dsi_ctrl, "Cannot transfer, size is greater than 256K\n");
-			}
-#endif
 			DSI_CTRL_ERR(dsi_ctrl, "Cannot transfer,size is greater than 4096\n");
 			return -ENOTSUPP;
 		}
@@ -1453,10 +1399,6 @@ static void dsi_kickoff_msg_tx(struct dsi_ctrl *dsi_ctrl,
 
 	if (flags & DSI_CTRL_CMD_DEFER_TRIGGER) {
 		if (flags & DSI_CTRL_CMD_FETCH_MEMORY) {
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-			if (iris_is_chip_supported())
-				msm_gem_sync(dsi_ctrl->tx_cmd_buf);
-#endif
 			if (flags & DSI_CTRL_CMD_NON_EMBEDDED_MODE) {
 				dsi_hw_ops.kickoff_command_non_embedded_mode(
 							&dsi_ctrl->hw,
@@ -1560,40 +1502,7 @@ static void dsi_ctrl_validate_msg_flags(struct dsi_ctrl *dsi_ctrl,
 		!(msg->flags & MIPI_DSI_MSG_ASYNC_OVERRIDE))
 		*flags &= ~DSI_CTRL_CMD_ASYNC_WAIT;
 }
-/*#ifdef OPLUS_BUG_STABILITY*/
-extern int oplus_dsi_log_type;
-extern int no_clear_slave_dma;
-static void print_cmd_desc(struct dsi_ctrl *dsi_ctrl, const struct mipi_dsi_msg *msg)
-{
-      char buf[512];
-      int len = 0;
-      size_t i;
-      char *tx_buf = (char*)msg->tx_buf;
 
-      memset(buf, 0, sizeof(buf));
-
-      /* Packet Info */
-      len += snprintf(buf, sizeof(buf) - len,  "%02X ", msg->type);
-      /* Last bit */
-      len += snprintf(buf + len, sizeof(buf) - len, "%02X ", (msg->flags & MIPI_DSI_MSG_LASTCOMMAND) ? 1 : 0);
-      len += snprintf(buf + len, sizeof(buf) - len, "%02X ", msg->channel);
-      len += snprintf(buf + len, sizeof(buf) - len, "%02X ", (unsigned int)msg->flags);
-      /* Delay */
-      len += snprintf(buf + len, sizeof(buf) - len, "%02X ", msg->wait_ms);
-      len += snprintf(buf + len, sizeof(buf) - len, "%02X %02X ", msg->tx_len >> 8, msg->tx_len & 0x00FF);
-
-      /* Packet Payload */
-      for (i = 0 ; i < msg->tx_len ; i++) {
-        len += snprintf(buf + len, sizeof(buf) - len, "%02X ", tx_buf[i]);
-        /* Break to prevent show too long command */
-        if (i > 250)
-          break;
-      }
-
-      DSI_CTRL_ERR(dsi_ctrl, "%s\n", buf);
-}
-
-/*#endif*/
 /**
  * dsi_ctrl_clear_slave_dma_status -   API to clear slave DMA status
  * @dsi_ctrl:                   DSI controller handle.
@@ -1627,6 +1536,38 @@ static void dsi_ctrl_clear_slave_dma_status(struct dsi_ctrl *dsi_ctrl, u32 flags
 	}
 }
 
+#ifdef OPLUS_BUG_STABILITY
+static void print_cmd_desc(struct dsi_ctrl *dsi_ctrl, const struct mipi_dsi_msg *msg)
+{
+	char buf[1024];
+	int len = 0;
+	size_t i;
+	char *tx_buf = (char*)msg->tx_buf;
+
+	/* Packet Info */
+	len += snprintf(buf, sizeof(buf) - len,  "%02X ", msg->type);
+	/* Last bit */
+	len += snprintf(buf + len, sizeof(buf) - len, "%02X ", (msg->flags & MIPI_DSI_MSG_LASTCOMMAND) ? 1 : 0);
+	len += snprintf(buf + len, sizeof(buf) - len, "%02X ", msg->channel);
+	len += snprintf(buf + len, sizeof(buf) - len, "%02X ", (unsigned int)msg->flags);
+	/* Delay */
+	len += snprintf(buf + len, sizeof(buf) - len, "%02X ", msg->wait_ms);
+	len += snprintf(buf + len, sizeof(buf) - len, "%02X %02X ", msg->tx_len >> 8, msg->tx_len & 0x00FF);
+
+	/* Packet Payload */
+	for (i = 0 ; i < msg->tx_len ; i++) {
+		len += snprintf(buf + len, sizeof(buf) - len, "%02X ", tx_buf[i]);
+		/* Break to prevent show too long command */
+		if (i > 250)
+			break;
+	}
+
+	DSI_CTRL_ERR(dsi_ctrl, "%s\n", buf);
+}
+extern int dsi_cmd_log_enable;
+extern int oplus_dsi_log_type;
+#endif /* OPLUS_BUG_STABILITY */
+
 static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 			  const struct mipi_dsi_msg *msg,
 			  u32 *flags)
@@ -1640,10 +1581,10 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 	u32 cnt = 0;
 	u8 *cmdbuf;
 
-	/*#ifdef OPLUS_BUG_STABILITY*/
-	if (OPLUS_DEBUG_LOG_CMD & oplus_dsi_log_type)
+#ifdef OPLUS_BUG_STABILITY
+	if (dsi_cmd_log_enable || (OPLUS_DEBUG_LOG_CMD & oplus_dsi_log_type))
 		print_cmd_desc(dsi_ctrl, msg);
-	/*#endif*/
+#endif /* OPLUS_BUG_STABILITY */
 
 	/* Select the tx mode to transfer the command */
 	dsi_message_setup_tx_mode(dsi_ctrl, msg->tx_len, flags);
@@ -1664,15 +1605,9 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 	if (dsi_ctrl->dma_wait_queued)
 		dsi_ctrl_flush_cmd_dma_queue(dsi_ctrl);
 
-#ifndef OPLUS_BUG_STABILITY
-/* PSW.MM.Display.LCD.Stability, 2021/11/17, add for skip clear dma if no need */
 	if ((*flags & DSI_CTRL_CMD_BROADCAST) &&
 			(!(*flags & DSI_CTRL_CMD_BROADCAST_MASTER)))
 		dsi_ctrl_clear_slave_dma_status(dsi_ctrl, *flags);
-#else
-	if ((!(*flags & DSI_CTRL_CMD_BROADCAST_MASTER)) && (no_clear_slave_dma == 0))
-		dsi_ctrl_clear_slave_dma_status(dsi_ctrl, *flags);
-#endif /* OPLUS_BUG_STABILITY */
 
 	if (*flags & DSI_CTRL_CMD_NON_EMBEDDED_MODE) {
 		cmd_mem.offset = dsi_ctrl->cmd_buffer_iova;
@@ -1741,12 +1676,7 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 
 		cmdbuf = (u8 *)(dsi_ctrl->vaddr);
 
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-		if (!iris_is_chip_supported())
-			msm_gem_sync(dsi_ctrl->tx_cmd_buf);
-#else
 		msm_gem_sync(dsi_ctrl->tx_cmd_buf);
-#endif
 		for (cnt = 0; cnt < length; cnt++)
 			cmdbuf[dsi_ctrl->cmd_len + cnt] = buffer[cnt];
 
@@ -3189,8 +3119,6 @@ int dsi_ctrl_host_timing_update(struct dsi_ctrl *dsi_ctrl)
 		return -EINVAL;
 	}
 
-	mutex_lock(&dsi_ctrl->ctrl_lock);
-
 	if (dsi_ctrl->hw.ops.host_setup)
 		dsi_ctrl->hw.ops.host_setup(&dsi_ctrl->hw,
 				&dsi_ctrl->host_config.common_config);
@@ -3208,11 +3136,9 @@ int dsi_ctrl_host_timing_update(struct dsi_ctrl *dsi_ctrl)
 				0x0, NULL);
 	} else {
 		DSI_CTRL_ERR(dsi_ctrl, "invalid panel mode for resolution switch\n");
-		mutex_unlock(&dsi_ctrl->ctrl_lock);
 		return -EINVAL;
 	}
 
-	mutex_unlock(&dsi_ctrl->ctrl_lock);
 	return 0;
 }
 
@@ -3584,22 +3510,14 @@ int dsi_ctrl_cmd_transfer(struct dsi_ctrl *dsi_ctrl,
 
 	if (*flags & DSI_CTRL_CMD_READ) {
 		rc = dsi_message_rx(dsi_ctrl, msg, flags);
-		if (rc <= 0) {
+		if (rc <= 0)
 			DSI_CTRL_ERR(dsi_ctrl, "read message failed read length, rc=%d\n",
 					rc);
-			#ifdef OPLUS_BUG_STABILITY
-			DSI_CTRL_MM_ERR(dsi_ctrl, "read message failed read length, rc=%d\n",rc);
-			#endif
-		}
 	} else {
 		rc = dsi_message_tx(dsi_ctrl, msg, flags);
-		if (rc) {
+		if (rc)
 			DSI_CTRL_ERR(dsi_ctrl, "command msg transfer failed, rc = %d\n",
 					rc);
-			#ifdef OPLUS_BUG_STABILITY
-			DSI_CTRL_MM_ERR(dsi_ctrl, "command msg transfer failed, rc = %d\n",rc);
-			#endif
-		}
 	}
 
 	dsi_ctrl_update_state(dsi_ctrl, DSI_CTRL_OP_CMD_TX, 0x0);

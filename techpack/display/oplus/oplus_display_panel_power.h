@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_display_panel_power.h
 ** Description : oplus display panel power control
 ** Version : 1.0

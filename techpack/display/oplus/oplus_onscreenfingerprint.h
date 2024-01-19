@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_onscreenfingerprint.h
 ** Description : oplus onscreenfingerprint feature
 ** Version : 1.0
@@ -27,11 +28,7 @@ enum CUST_ALPHA_ENUM{
 	CUST_A_OPAQUE, /* alpha = 255, opaque */
 };
 
-void oplus_set_aod_dim_alpha(int cust);
-
 int oplus_get_panel_brightness(void);
-
-int oplus_get_panel_power_mode(void);
 
 int dsi_panel_parse_oplus_fod_config(struct dsi_panel *panel);
 
@@ -50,6 +47,10 @@ int sde_crtc_set_onscreenfinger_defer_sync(struct drm_crtc_state *crtc_state, bo
 int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state *crtc_state,
 		int stage);
 
+bool is_skip_pcc(struct drm_crtc *crtc);
+
+bool sde_cp_crtc_update_pcc(struct drm_crtc *crtc);
+
 bool _sde_encoder_setup_dither_for_onscreenfingerprint(struct sde_encoder_phys *phys,
 		void *dither_cfg, int len, struct sde_hw_pingpong *hw_pp);
 
@@ -59,9 +60,11 @@ int oplus_display_panel_get_dimlayer_hbm(void *data);
 int oplus_display_panel_notify_fp_press(void *data);
 int oplus_ofp_set_fp_type(void *buf);
 int oplus_ofp_get_fp_type(void *buf);
-ssize_t oplus_ofp_set_fp_type_attr(struct kobject *obj,
-       struct kobj_attribute *attr, const char *buf, size_t count);
-ssize_t oplus_ofp_get_fp_type_attr(struct kobject *obj,
-       struct kobj_attribute *attr, char *buf);
-
+ssize_t oplus_ofp_set_fp_type_attr(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count);
+ssize_t oplus_ofp_get_fp_type_attr(struct device *dev,
+				struct device_attribute *attr, char *buf);
+int oplus_get_panel_power_mode(void);
+void oplus_set_aod_dim_alpha(int cust);
 #endif /*_OPLUS_ONSCREENFINGERPRINT_H_*/

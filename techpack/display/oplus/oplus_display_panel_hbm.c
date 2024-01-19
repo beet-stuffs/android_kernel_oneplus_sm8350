@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_display_panel_hbm.c
 ** Description : oplus display panel hbm feature
 ** Version : 1.0
@@ -11,7 +12,6 @@
 ******************************************************************/
 #include "oplus_display_panel_hbm.h"
 #include "oplus_dsi_support.h"
-#include "oplus_display_panel_common.h"
 
 int hbm_mode = 0;
 DEFINE_MUTEX(oplus_hbm_lock);
@@ -137,11 +137,6 @@ int dsi_display_hbm_on(struct dsi_display *display)
 					  DSI_CORE_CLK, DSI_CLK_OFF);
 	}
 
-	if ((!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) ||
-		(!strcmp(display->panel->oplus_priv.vendor_name, "AMB670YF01"))) {
-		usleep_range(36000, 36100);
-	}
-
 	mutex_unlock(&display->display_lock);
 
 	return rc;
@@ -190,7 +185,6 @@ int dsi_display_hbm_off(struct dsi_display *display)
 	}
 
 	mutex_lock(&display->display_lock);
-	mutex_lock(&display->panel->panel_lock);
 
 	/* enable the clk vote for CMD mode panels */
 	if (display->config.panel_mode == DSI_OP_CMD_MODE) {
@@ -198,19 +192,7 @@ int dsi_display_hbm_off(struct dsi_display *display)
 				     DSI_CORE_CLK, DSI_CLK_ON);
 	}
 
-	if ((!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) ||
-		(!strcmp(display->panel->oplus_priv.vendor_name, "AMB670YF01"))) {
-		rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_HBM_OFF);
-		dsi_panel_set_backlight(display->panel, display->panel->bl_config.bl_level);
-	}
-	else if (!strcmp(display->panel->oplus_priv.vendor_name, "AMS662ZS01")) {
-		rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_HBM_OFF);
-		dsi_panel_set_backlight(display->panel, display->panel->bl_config.bl_level);
-	}
-	else {
-		dsi_panel_set_backlight(display->panel, display->panel->bl_config.bl_level);
-		rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_HBM_OFF);
-	}
+	rc = dsi_panel_hbm_off(display->panel);
 
 	if (rc) {
 		pr_err("[%s] failed to dsi_panel_hbm_off, rc=%d\n",
@@ -222,7 +204,6 @@ int dsi_display_hbm_off(struct dsi_display *display)
 					  DSI_CORE_CLK, DSI_CLK_OFF);
 	}
 
-	mutex_unlock(&display->panel->panel_lock);
 	mutex_unlock(&display->display_lock);
 	return rc;
 }
@@ -268,25 +249,14 @@ int oplus_display_panel_set_hbm(void *buf)
 
 	__oplus_display_set_hbm((*temp_save));
 
-	if ((!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) ||
-		(!strcmp(display->panel->oplus_priv.vendor_name, "AMB670YF01"))) {
-		if((hbm_mode > 1) &&(hbm_mode <= 10)) {
-			ret = dsi_display_normal_hbm_on(get_main_display());
-		} else if (hbm_mode == 1) {
-			ret = dsi_display_normal_hbm_on(get_main_display());
-		} else if (hbm_mode == 0) {
-			ret = dsi_display_hbm_off(get_main_display());
-		} else if (hbm_mode == 4095) {
-			ret = oplus_display_panel_hbm_lightspot_check();
-		}
-	} else {
-		if ((hbm_mode > 1) && (hbm_mode <= 10)) {
-			ret = dsi_display_normal_hbm_on(get_main_display());
-		} else if (hbm_mode == 1) {
-			ret = dsi_display_hbm_on(get_main_display());
-		} else if (hbm_mode == 0) {
-			ret = dsi_display_hbm_off(get_main_display());
-		}
+	if ((hbm_mode > 1) && (hbm_mode <= 10)) {
+		ret = dsi_display_normal_hbm_on(get_main_display());
+
+	} else if (hbm_mode == 1) {
+		ret = dsi_display_hbm_on(get_main_display());
+
+	} else if (hbm_mode == 0) {
+		ret = dsi_display_hbm_off(get_main_display());
 	}
 
 	if (ret) {

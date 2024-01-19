@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  oplus Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_aod.h
 ** Description : oplus aod feature
 ** Version : 1.0

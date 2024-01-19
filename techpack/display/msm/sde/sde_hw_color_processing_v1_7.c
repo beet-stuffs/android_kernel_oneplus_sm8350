@@ -953,6 +953,7 @@ void sde_lock_dspp_hist_v1_7(struct sde_hw_dspp *ctx, void *cfg)
 {
 	u32 offset_ctl, val;
 
+#ifdef OPLUS_BUG_STABILITY
 	if (!ctx || !cfg) {
 		DRM_ERROR("invalid parameters ctx %pK cfg %pK", ctx, cfg);
 		return;
@@ -962,6 +963,7 @@ void sde_lock_dspp_hist_v1_7(struct sde_hw_dspp *ctx, void *cfg)
 
 	val = (*(u32 *)cfg) & 0x1;
 	SDE_REG_WRITE(&ctx->hw, offset_ctl, val);
+#endif/* OPLUS_BUG_STABILITY */
 }
 
 void sde_setup_dspp_dither_v1_7(struct sde_hw_dspp *ctx, void *cfg)

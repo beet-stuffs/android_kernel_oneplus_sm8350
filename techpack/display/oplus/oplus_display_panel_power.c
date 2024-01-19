@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_display_panel_power.c
 ** Description : oplus display panel power control
 ** Version : 1.0
@@ -205,7 +206,7 @@ int oplus_display_panel_set_pwr(void *data)
 	}
 
 	if (panel_vol_value < panel_vol_bak[panel_vol_id].voltage_min ||
-		panel_vol_value > panel_vol_bak[panel_vol_id].voltage_max)
+		panel_vol_id > panel_vol_bak[panel_vol_id].voltage_max)
 		return -EINVAL;
 
 	if (!display) {
@@ -248,7 +249,6 @@ int __oplus_display_set_power_status(int status) {
 	mutex_lock(&oplus_power_status_lock);
 	if(status != oplus_request_power_status) {
 		oplus_request_power_status = status;
-		printk(KERN_INFO "oplus_display_set_power_status = %d\n", status);
 	}
 	mutex_unlock(&oplus_power_status_lock);
 	return 0;
@@ -257,7 +257,7 @@ int __oplus_display_set_power_status(int status) {
 int oplus_display_panel_get_power_status(void *data) {
 	uint32_t *power_status = data;
 
-	printk(KERN_DEBUG "oplus_display_get_power_status = %d\n", get_oplus_display_power_status());
+	printk(KERN_INFO "oplus_display_get_power_status = %d\n", get_oplus_display_power_status());
 	(*power_status) = get_oplus_display_power_status();
 
 	return 0;
@@ -266,7 +266,7 @@ int oplus_display_panel_get_power_status(void *data) {
 int oplus_display_panel_set_power_status(void *data) {
 	uint32_t *temp_save = data;
 
-	printk(KERN_DEBUG "%s oplus_display_set_power_status = %d\n", __func__, (*temp_save));
+	printk(KERN_INFO "%s oplus_display_set_power_status = %d\n", __func__, (*temp_save));
 	__oplus_display_set_power_status((*temp_save));
 
 	return 0;

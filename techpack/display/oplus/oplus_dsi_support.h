@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2018,  OPLUS Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_dsi_support.h
 ** Description : display driver private management
 ** Version : 1.0
@@ -58,22 +59,17 @@ enum oplus_display_feature {
 	OPLUS_DISPLAY_FEATURE_MAX,
 };
 
+/* #ifdef OPLUS_BUG_COMPATIBILITY */
 enum oplus_display_cabc_status {
 	OPLUS_DISPLAY_CABC_OFF = 0,
 	OPLUS_DISPLAY_CABC_UI,
 	OPLUS_DISPLAY_CABC_IMAGE,
 	OPLUS_DISPLAY_CABC_VIDEO,
-	OPLUS_DISPLAY_CABC_UNLOCK = 8,
-	OPLUS_DISPLAY_CABC_LOCK = 9,
+	OPLUS_DISPLAY_CABC_EXIT_SPECIAL = 8,			 /*OPLUS_DISPLAY_CABC_EXIT_SPECIAL = 8 = CabcManager.LOCK_MODE*/
+	OPLUS_DISPLAY_CABC_ENTER_SPECIAL = 9,			 /*OPLUS_DISPLAY_CABC_ENTER_SPECIAL = 9 = CabcManager.UNLOCK_MODE*/
 	OPLUS_DISPLAY_CABC_UNKNOW,
 };
-
-enum oplus_display_dre_status {
-	OPLUS_DISPLAY_DRE_OFF = 0,
-	OPLUS_DISPLAY_DRE_ON,
-	OPLUS_DISPLAY_DRE_UNKNOW,
-};
-
+/* #endif */
 typedef struct panel_serial_info {
 	int reg_index;
 	uint64_t year;

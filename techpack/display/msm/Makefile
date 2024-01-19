@@ -151,13 +151,11 @@ msm_drm-$(CONFIG_DRM_OPLUS) += ../oplus/oplus_dsi_support.o \
 	../oplus/oplus_display_panel.o \
 	../oplus/oplus_display_panel_power.o \
 	../oplus/oplus_display_panel_seed.o \
+	../oplus/oplus_display_panel_cabc.o \
 	../oplus/oplus_display_panel_common.o \
 	../oplus/oplus_display_panel_hbm.o \
-	../oplus/oplus_display_esd.o \
-	../oplus/oplus_bl.o
+	../oplus/leds-sm5109c.o
 #endif /*OPLUS_BUG_STABILITY*/
-
-msm_drm-$(CONFIG_DRM_OPLUS) += ../oplus/oplus_adfr.o
 
 msm_drm-$(CONFIG_HDCP_QSEECOM) += ../hdcp/msm_hdcp.o \
 
@@ -178,31 +176,14 @@ msm_drm-$(CONFIG_MSM_SDE_ROTATOR) += ../rotator/sde_rotator_dev.o \
 	../rotator/sde_rotator_r1_debug.o \
 	../rotator/sde_rotator_r3_debug.o
 
+#ifdef OPLUS_BUG_STABILITY
 oplus_notify-$(CONFIG_DRM_OPLUS_NOTIFY) += ../oplus/oplus_notify.o
-oplus_lcm_brightness_notify-$(CONFIG_DRM_LCM_BRIGHTNESS_NOTIFY) += ../oplus/oplus_lcm_brightness_notify.o
-
-ifeq ($(findstring OPLUS_FEATURE_PXLW_IRIS5,$(KBUILD_CFLAGS)),OPLUS_FEATURE_PXLW_IRIS5)
-msm_drm-$(CONFIG_DRM_MSM_DSI) += dsi/iris/dsi_iris5_ioctl.o \
-                               dsi/iris/dsi_iris5_lightup.o \
-                               dsi/iris/dsi_iris5_lightup_ocp.o \
-                               dsi/iris/dsi_iris5_lp.o \
-                               dsi/iris/dsi_iris5_lut.o \
-                               dsi/iris/dsi_iris5_pq.o \
-                               dsi/iris/dsi_iris5_mode_switch.o \
-                               dsi/iris/dsi_iris5_cmds.o \
-                               dsi/iris/dsi_iris5_i3c.o \
-                               dsi/iris/dsi_iris5_i2c.o \
-                               dsi/iris/dsi_iris5_loop_back.o \
-                               dsi/iris/dsi_iris5_gpio.o \
-                               dsi/iris/dsi_iris5_frc.o \
-                               dsi/iris/dsi_iris5_timing_switch.o \
-                               dsi/iris/dsi_iris5_dbg.o \
-                               dsi/iris/msm_iris5_extended.o \
-                               dsi/iris/sde_iris5_extended.o \
-                               dsi/iris/dsi_iris5_extended.o
-endif #/* OPLUS_FEATURE_PXLW_IRIS5 */
+#endif /*OPLUS_BUG_STABILITY*/
 
 obj-$(CONFIG_DISPLAY_BUILD)	+= msm_drm.o
+
+#ifdef OPLUS_BUG_STABILITY
 obj-$(CONFIG_DRM_OPLUS_NOTIFY) += oplus_notify.o
+#endif /*OPLUS_BUG_STABILITY*/
+
 obj-$(CONFIG_DRM_FBDEV_EMULATION) += msm_fbdev.o
-obj-$(CONFIG_DRM_LCM_BRIGHTNESS_NOTIFY) += oplus_lcm_brightness_notify.o

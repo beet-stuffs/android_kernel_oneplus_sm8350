@@ -468,7 +468,6 @@ struct sde_crtc_state {
 	bool fingerprint_pressed;
 	bool fingerprint_defer_sync;
 	struct sde_hw_dim_layer *fingerprint_dim_layer;
-	bool aod_skip_pcc;
 #endif
 };
 

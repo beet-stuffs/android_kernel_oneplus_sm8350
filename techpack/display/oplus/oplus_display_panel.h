@@ -1,5 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** VENDOR_EDIT
 ** File : oplus_display_panel.h
 ** Description : oplus display panel char dev  /dev/oplus_panel
 ** Version : 1.0
@@ -24,6 +25,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/cdev.h>
+#include "oplus_display_private_api.h"
 
 #define OPLUS_PANEL_NAME "oplus_display"
 #define OPLUS_PANEL_CLASS_NAME "oplus_display_class"
@@ -46,7 +48,7 @@ static struct device *panel_dev;
 static int panel_ref = 0;
 static struct cdev panel_cdev;
 
-#define APOLLO_BACKLIGHT_LENS 4096*9 /* units: bytes 9pages */
+#define APOLLO_BACKLIGHT_LENS 4096*9 //units: bytes 9pages
 
 enum APOLLO_BL_ID : int {
 	APOLLO_BL_4096 = 4096,
@@ -54,12 +56,12 @@ enum APOLLO_BL_ID : int {
 };
 
 struct oplus_apollo_backlight_list {
-	bool bl_fix; /* for 4096/8192 fix */
-	int bl_id_lens; /* 1 for 4096, 2 for 8192; */
+	bool bl_fix; //for 4096/8192 fix
+	int bl_id_lens;    //1 for 4096, 2 for 8192;
 	int bl_level_last;
 	int bl_index_last;
 	int buf_size;
-	void *vaddr; /* dmabuf virtual address */
+	void *vaddr; //dmabuf virtual address
 	unsigned short *apollo_bl_list;
 	unsigned short *panel_bl_list;
 	struct dma_buf *dmabuf;
@@ -67,8 +69,8 @@ struct oplus_apollo_backlight_list {
 
 struct apollo_backlight_map_value
 {
-	int index; /* backlight index */
-	int bl_level; /* the value of the index */
+	int index; //backlight index
+	int bl_level; //the value of the index
 	int apollo_bl_level;
 };
 struct panel_ioctl_desc {
@@ -82,19 +84,12 @@ struct kernel_loglevel {
 	unsigned int log_level;
 };
 
-struct softiris_color
-{
-	uint32_t color_vivid_status; /* [0:1] [not support:support] */
-	uint32_t color_srgb_status; /* [0:1] [not support:support] */
-	uint32_t color_softiris_status;
-	uint32_t color_dual_panel_status;
-	uint32_t color_dual_brightness_status;
-};
-
 /*oplus ioctl case start*/
 #define PANEL_COMMOND_BASE 0x00
-#define PANEL_COMMOND_MAX  0xBD
 
+/* #ifdef OPLUS_BUG_COMPATIBILITY */
+#define PANEL_COMMOND_MAX  0xBD
+/* #endif */
 #define PANEL_IOCTL_SET_POWER				  PANEL_IOW(0x01, struct panel_vol_set)
 #define PANEL_IOCTL_GET_POWER				  PANEL_IOWR(0x02, struct panel_vol_get)
 #define PANEL_IOCTL_SET_SEED				  PANEL_IOW(0x03, unsigned int)
@@ -140,27 +135,27 @@ struct softiris_color
 #define PANEL_IOCTL_GET_OPLUS_BRIGHTNESS      PANEL_IOWR(0x2B, unsigned int)
 #define PANEL_IOCTL_SET_LCM_CABC              PANEL_IOW(0x2C, unsigned int)
 #define PANEL_IOCTL_GET_LCM_CABC              PANEL_IOWR(0x2D, unsigned int)
-#define PANEL_IOCTL_SET_AOD_AREA              PANEL_IOW(0x2E, unsigned int)
 #define PANEL_IOCTL_GET_OPLUS_MAXBRIGHTNESS   PANEL_IOWR(0x2F, unsigned int)
-#define PANEL_IOCTL_SET_QCOM_LOG_LEVEL        PANEL_IOW(0x30, struct kernel_loglevel)
-#define PANEL_IOCTL_SET_PANEL_ROUND_CORNER    PANEL_IOWR(0x33, unsigned int)
-#define PANEL_IOCTL_GET_PANEL_ROUND_CORNER    PANEL_IOWR(0x34, unsigned int)
-#define PANEL_IOCTL_GET_LCD_MAX_BRIGHTNESS    PANEL_IOWR(0x38, unsigned int)
+#define PANEL_IOCTL_SET_QCOM_LOG_LEVEL         PANEL_IOW(0x30, struct kernel_loglevel)
 #define PANEL_IOCTL_SET_APOLLO_BACKLIGHT      PANEL_IOW(0x51, struct apollo_backlight_map_value)
-#define PANEL_IOCTL_GET_SOFTIRIS_COLOR        PANEL_IOWR(0x53, struct softiris_color)
-#define PANEL_IOCTL_SET_DITHER_STATUS         PANEL_IOWR(0x54, unsigned int)
-#define PANEL_IOCTL_GET_DITHER_STATUS         PANEL_IOWR(0x55, unsigned int)
-#define PANEL_IOCTL_SET_TE_REFCOUNT_ENABLE	  PANEL_IOW(0x56, unsigned int)
-#define PANEL_IOCTL_GET_TE_REFCOUNT_ENABLE	  PANEL_IOWR(0x57, unsigned int)
+#define PANEL_IOCTL_SET_DITHER_STATUS        PANEL_IOWR(0x54, unsigned int)
+#define PANEL_IOCTL_GET_DITHER_STATUS        PANEL_IOWR(0x55, unsigned int)
 #define PANEL_IOCTL_GET_DP_SUPPORT	          PANEL_IOWR(0x58, unsigned int)
-#define PANEL_IOCTL_SET_CABC_STATUS           PANEL_IOW(0x59, unsigned int)
-#define PANEL_IOCTL_GET_CABC_STATUS           PANEL_IOWR(0x5A, unsigned int)
-#define PANEL_IOCTL_SET_DRE_STATUS            PANEL_IOW(0x5B, unsigned int)
-#define PANEL_IOCTL_GET_DRE_STATUS            PANEL_IOWR(0x5C, unsigned int)
+
+/* #ifdef OPLUS_BUG_COMPATIBILITY */
+#define PANEL_IOCTL_SET_CABC_STATUS			PANEL_IOW(0x59, unsigned int)
+#define PANEL_IOCTL_GET_CABC_STATUS			PANEL_IOWR(0x5A, unsigned int)
+/* #endif */
+#define PANEL_IOCTL_SET_SHUTDOWN_FLAG		PANEL_IOWR(0xBC, unsigned int)
+
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+#define PANEL_IOCTL_SET_AOD_AREA              PANEL_IOWR(0x2E, struct aod_area_para)
+#define PANEL_IOCTL_GET_AOD_AREA              PANEL_IOWR(0xB9, struct aod_area_para)
+#define PANEL_IOCTL_SET_VIDEO                 PANEL_IOWR(0xBA, unsigned int)
+#define PANEL_IOCTL_GET_VIDEO                 PANEL_IOWR(0xBB, unsigned int)
 #define PANEL_IOCTL_SET_FP_TYPE               PANEL_IOW(0x64, unsigned int)
 #define PANEL_IOCTL_GET_FP_TYPE               PANEL_IOWR(0x65, unsigned int)
-#define PANEL_IOCTL_SET_SHUTDOWN_FLAG         PANEL_IOWR(0xBC, unsigned int)
-
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
 /*oplus ioctl case end*/
 
 int oplus_display_panel_init(void);
