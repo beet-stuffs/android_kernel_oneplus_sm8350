@@ -9,9 +9,11 @@
 #include "cam_flash_core.h"
 #include "cam_common_util.h"
 #include "camera_main.h"
+
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 #include "oplus_cam_flash_dev.h"
-#endif
+extern struct cam_flash_settings flash_ftm_data;
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 static int32_t cam_flash_driver_cmd(struct cam_flash_ctrl *fctrl,
 		void *arg, struct cam_flash_private_soc *soc_private)
@@ -189,6 +191,23 @@ static int32_t cam_flash_driver_cmd(struct cam_flash_ctrl *fctrl,
 			goto release_mutex;
 		}
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+		cam_flash_off(fctrl);
+#else /*OPLUS_FEATURE_CAMERA_COMMON*/
+		if (fctrl->io_master_info.master_type == I2C_MASTER || fctrl->io_master_info.master_type == CCI_MASTER) {
+			if (flash_ftm_data.valid_setting_index < 0 || flash_ftm_data.valid_setting_index >= flash_ftm_data.total_flash_dev) {
+				CAM_ERR(CAM_FLASH, "No match flash ftm setting!");
+				return -1;
+			}
+
+			if (flash_ftm_data.flash_ftm_settings[flash_ftm_data.valid_setting_index].need_standby_mode) {
+				cam_ftm_i2c_set_standby(fctrl, &(flash_ftm_data.flash_ftm_settings[flash_ftm_data.valid_setting_index]));
+			}
+		}
+		else {
+			cam_flash_off(fctrl);
+		}
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 		fctrl->func_tbl.flush_req(fctrl, FLUSH_ALL, 0);
 		fctrl->last_flush_req = 0;
 		cam_flash_off(fctrl);
@@ -247,6 +266,13 @@ static const struct of_device_id cam_flash_dt_match[] = {
 	{.compatible = "qcom,camera-flash", .data = NULL},
 	{}
 };
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+static const struct of_device_id cam_i2c_flash_dt_match[] = {
+	{.compatible = "qcom,i2c_flash", .data = NULL},
+	{}
+};
+#endif
 
 static int cam_flash_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
@@ -541,10 +567,12 @@ static int cam_flash_component_bind(struct device *dev,
 	mutex_init(&(fctrl->flash_mutex));
 
 	fctrl->flash_state = CAM_FLASH_STATE_INIT;
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-       oplus_cam_flash_proc_init(fctrl, pdev);
-#endif
 	CAM_DBG(CAM_FLASH, "Component bound successfully");
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	rc = oplus_cam_flash_proc_init(fctrl, pdev);
+#endif
+
 	return rc;
 
 free_cci_resource:
@@ -642,7 +670,11 @@ static int32_t cam_flash_i2c_driver_probe(struct i2c_client *client,
 	fctrl->soc_info.dev_name = client->name;
 	fctrl->io_master_info.master_type = I2C_MASTER;
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 	rc = cam_flash_get_dt_data(fctrl, &fctrl->soc_info);
+#else /*OPLUS_FEATURE_CAMERA_COMMON*/
+	rc = cam_i2c_flash_get_dt_data(fctrl, &fctrl->soc_info);
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 	if (rc) {
 		CAM_ERR(CAM_FLASH, "failed: cam_sensor_parse_dt rc %d", rc);
 		goto free_ctrl;
@@ -716,6 +748,12 @@ static int32_t cam_flash_i2c_driver_probe(struct i2c_client *client,
 	mutex_init(&(fctrl->flash_mutex));
 	fctrl->flash_state = CAM_FLASH_STATE_INIT;
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	oplus_cam_i2c_flash_proc_init(fctrl, client);
+#endif
+
+	CAM_DBG(CAM_FLASH, "I2c flash probe sucess");
+
 	return rc;
 
 unreg_subdev:
@@ -750,29 +788,40 @@ static struct i2c_driver cam_flash_i2c_driver = {
 	.remove = cam_flash_i2c_driver_remove,
 	.driver = {
 		.name = FLASH_DRIVER_I2C,
-		.of_match_table = cam_flash_dt_match,
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+		.of_match_table = cam_i2c_flash_dt_match,
+	#endif
 	},
 };
 
 int32_t cam_flash_init_module(void)
 {
 	int32_t rc = 0;
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	reigster_flash_shutdown_notifier();
+#endif
 
+	CAM_DBG(CAM_FLASH, "flash platform probe start");
 	rc = platform_driver_register(&cam_flash_platform_driver);
 	if (rc < 0) {
 		CAM_ERR(CAM_FLASH, "platform probe failed rc: %d", rc);
-		return rc;
+		//return rc;
 	}
 
+	CAM_DBG(CAM_FLASH, "flash i2c probe start");
 	rc = i2c_add_driver(&cam_flash_i2c_driver);
 	if (rc < 0)
 		CAM_ERR(CAM_FLASH, "i2c_add_driver failed rc: %d", rc);
 
+	CAM_DBG(CAM_FLASH, "flash  probe end");
 	return rc;
 }
 
 void cam_flash_exit_module(void)
 {
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	unreigster_flash_shutdown_notifier();
+#endif
 	platform_driver_unregister(&cam_flash_platform_driver);
 	i2c_del_driver(&cam_flash_i2c_driver);
 }

@@ -19,6 +19,10 @@
 #define CAM_IFE_QTIMER_MUL_FACTOR        10000
 #define CAM_IFE_QTIMER_DIV_FACTOR        192
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
+
 /*
  * Maximum hw resource - This number is based on the maximum
  * output port resource. The current maximum resource number
@@ -28,6 +32,14 @@
 
 /* max requests per ctx for isp */
 #define CAM_ISP_CTX_REQ_MAX                     8
+
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+/*
+ * Maximum configuration entry size  - This is based on the
+ * worst case DUAL IFE use case plus some margin.
+ */
+#define CAM_ISP_CTX_CFG_MAX                     25
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 /*
  * Maximum entries in state monitoring array for error logging
@@ -215,9 +227,6 @@ struct cam_isp_context_state_monitor {
 
 struct cam_isp_context_req_id_info {
 	int64_t                          last_bufdone_req_id;
-#ifdef OPLUS_FEATURE_CAMERA_COMMON //lanhe todo:
-	uint64_t                         last_rdi_req_id;
-#endif
 };
 
 /**
@@ -286,9 +295,6 @@ struct cam_isp_context_event_record {
 struct cam_isp_context {
 	struct cam_context              *base;
 
-#ifdef OPLUS_FEATURE_CAMERA_COMMON //lanhe todo:
-	uint64_t                         rdi_frame_id;
-#endif
 	int64_t                          frame_id;
 	uint32_t                         frame_id_meta;
 	uint32_t                         substate_activated;

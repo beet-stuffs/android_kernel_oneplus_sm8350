@@ -172,7 +172,7 @@ int32_t cam_actuator_update_pid_to_v11(struct cam_actuator_ctrl_t *a_ctrl)
 		a_ctrl->io_master_info.cci_client->sid = 0xE4 >> 1;
 		if(IDSEL != 0xEE && IDSEL != 0xEF)
 		{
-			return 0;//¦Ì¡À?¡ã?¨ª¡ä?¡¤?R4?¨°R9¡ã?¡À?¡ê?2??¨¹?¡À?¨®?¨¹D??¨¢R11¡ã?¡À?
+			return 0;//Â¦ÃŒÂ¡Ã€?Â¡Ã£?Â¨ÂªÂ¡Ã¤?Â¡Â¤?R4?Â¨Â°R9Â¡Ã£?Â¡Ã€?Â¡Ãª?2??Â¨Â¹?Â¡Ã€?Â¨Â®?Â¨Â¹D??Â¨Â¢R11Â¡Ã£?Â¡Ã€?
 		}
 
 		// Write all data to EEPROM
@@ -320,53 +320,5 @@ int32_t oplus_cam_actuator_power_up(struct cam_actuator_ctrl_t *a_ctrl)
 			}
 		}
 	}
-	return rc;
-}
-
-int32_t oplus_cam_actuator_construct_default_power_setting(
-        struct cam_sensor_power_ctrl_t *power_info)
-{
-	int rc = 0;
-
-	power_info->power_setting_size = 2;
-	power_info->power_setting =
-		kzalloc(sizeof(struct cam_sensor_power_setting) * 2,
-			GFP_KERNEL);
-	if (!power_info->power_setting)
-		return -ENOMEM;
-
-	power_info->power_setting[0].seq_type = SENSOR_VIO;
-	power_info->power_setting[0].seq_val = CAM_VIO;
-	power_info->power_setting[0].config_val = 1;
-	power_info->power_setting[0].delay = 1;
-	power_info->power_setting[1].seq_type = SENSOR_VAF;
-	power_info->power_setting[1].seq_val = CAM_VAF;
-	power_info->power_setting[1].config_val = 1;
-	power_info->power_setting[1].delay = 15;
-
-	power_info->power_down_setting_size = 2;
-	power_info->power_down_setting =
-		kzalloc(sizeof(struct cam_sensor_power_setting) * 2,
-			GFP_KERNEL);
-	if (!power_info->power_down_setting) {
-		rc = -ENOMEM;
-		goto free_power_settings;
-	}
-
-	power_info->power_down_setting[0].seq_type = SENSOR_VAF;
-	power_info->power_down_setting[0].seq_val = CAM_VAF;
-	power_info->power_down_setting[0].config_val = 0;
-	power_info->power_down_setting[0].delay = 1;
-	power_info->power_down_setting[1].seq_type = SENSOR_VIO;
-	power_info->power_down_setting[1].seq_val = CAM_VIO;
-	power_info->power_down_setting[1].config_val = 0;
-	power_info->power_down_setting[1].delay = 0;
-
-	return rc;
-
-free_power_settings:
-	kfree(power_info->power_setting);
-	power_info->power_setting = NULL;
-	power_info->power_setting_size = 0;
 	return rc;
 }

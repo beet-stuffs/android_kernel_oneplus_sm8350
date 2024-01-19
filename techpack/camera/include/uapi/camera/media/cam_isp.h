@@ -10,7 +10,6 @@
 #include <media/cam_defs.h>
 #include <media/cam_isp_vfe.h>
 #include <media/cam_isp_ife.h>
-#include <media/cam_isp_sfe.h>
 #include <media/cam_cpas.h>
 #else
 #include <camera/media/cam_defs.h>

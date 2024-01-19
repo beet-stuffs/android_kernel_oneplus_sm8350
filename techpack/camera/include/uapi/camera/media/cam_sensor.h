@@ -8,8 +8,15 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
+
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
+
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 #include <media/cam_defs.h>
+
+#define SENSOR_ID_LIST_MAX 8
 #else
 #include <camera/media/cam_defs.h>
 #endif
@@ -169,6 +176,11 @@ struct cam_cmd_probe {
 	__u32    data_mask;
 	__u16    camera_id;
 	__u16    reserved;
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	__u16     flash_id;
+	__u16     sensor_id_list[SENSOR_ID_LIST_MAX];
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
+
 } __attribute__((packed));
 
 /**
@@ -494,4 +506,5 @@ struct cam_flash_query_cap_info {
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 #include "oplus/media/oplus_cam_sensor.h"
 #endif
+
 #endif

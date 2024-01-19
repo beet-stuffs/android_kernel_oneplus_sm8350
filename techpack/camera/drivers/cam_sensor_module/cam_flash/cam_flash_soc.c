@@ -9,6 +9,10 @@
 #include "cam_res_mgr_api.h"
 #include <dt-bindings/msm/msm-camera.h>
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
+
 void cam_flash_put_source_node_data(struct cam_flash_ctrl *fctrl)
 {
 	uint32_t count = 0, i = 0;
@@ -73,6 +77,15 @@ static int32_t cam_get_source_node_info(
 
 	soc_private->is_wled_flash =
 		of_property_read_bool(of_node, "wled-flash-support");
+/*Add by zhangming @ Camera 2022/05/16 for seprate pm8008 and wl2868c*/
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	fctrl->flash_index = -1;
+	fctrl->pmic_pm8008 =
+		of_property_read_bool(of_node, "pmic-pm8008");
+	CAM_ERR(CAM_FLASH, "flash pmic pm8008 %d", fctrl->pmic_pm8008);
+	rc = of_property_read_u32(of_node, "flash-index", &fctrl->flash_index);
+	CAM_ERR(CAM_FLASH, "flash index %d", fctrl->flash_index);
+#endif
 
 	rc = of_property_read_u32(of_node, "flash-type", &soc_private->flash_type);
 	if (rc) {
@@ -321,12 +334,53 @@ int cam_flash_get_dt_data(struct cam_flash_ctrl *fctrl,
 		pr_err("get flash_current failed rc %d\n", rc);
 	}
 #endif
+
 	rc = cam_get_source_node_info(of_node, fctrl, soc_info->soc_private);
 	if (rc) {
 		CAM_ERR(CAM_FLASH,
 			"cam_flash_get_pmic_source_info failed rc %d", rc);
 		goto free_soc_private;
 	}
+	return rc;
+
+free_soc_private:
+	kfree(soc_info->soc_private);
+	soc_info->soc_private = NULL;
+release_soc_res:
+	cam_soc_util_release_platform_resource(soc_info);
+	return rc;
+}
+
+int cam_i2c_flash_get_dt_data(struct cam_flash_ctrl *fctrl,
+	struct cam_hw_soc_info *soc_info)
+{
+	int32_t rc = 0;
+
+	if (!fctrl) {
+		CAM_ERR(CAM_FLASH, "NULL flash control structure");
+		return -EINVAL;
+	}
+
+	soc_info->soc_private =
+		kzalloc(sizeof(struct cam_flash_private_soc), GFP_KERNEL);
+	if (!soc_info->soc_private) {
+		rc = -ENOMEM;
+		goto release_soc_res;
+	}
+
+	rc = cam_soc_util_get_dt_properties(soc_info);
+	if (rc) {
+		CAM_ERR(CAM_FLASH, "Get_dt_properties failed rc %d", rc);
+		goto free_soc_private;
+	}
+
+	rc =  cam_sensor_util_init_gpio_pin_tbl(soc_info,
+			&fctrl->power_info.gpio_num_info);
+	if (rc < 0) {
+		CAM_ERR(CAM_FLASH, "Failed to read gpios %d", rc);
+		goto free_soc_private;
+	}
+
 	return rc;
 
 free_soc_private:

@@ -26,7 +26,7 @@
 #include "cam_req_mgr_debug.h"
 #include "cam_trace.h"
 
-#define CAM_TFE_HW_CONFIG_TIMEOUT 60
+#define CAM_TFE_HW_CONFIG_TIMEOUT 180
 #define CAM_TFE_HW_CONFIG_WAIT_MAX_TRY  3
 
 #define TZ_SVC_SMMU_PROGRAM 0x15
@@ -6098,10 +6098,17 @@ int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 				&g_tfe_hw_mgr.ctx_pool[i].free_res_list);
 		}
 
+		#ifndef OPLUS_FEATURE_CAMERA_COMMON
 		g_tfe_hw_mgr.ctx_pool[i].cdm_cmd =
 			kzalloc(((sizeof(struct cam_cdm_bl_request)) +
 				((CAM_ISP_CTX_CFG_MAX - 1) *
-				 sizeof(struct cam_cdm_bl_cmd))), GFP_KERNEL);
+				sizeof(struct cam_cdm_bl_cmd))), GFP_KERNEL);
+		#else
+		g_tfe_hw_mgr.ctx_pool[i].cdm_cmd =
+			kzalloc(((sizeof(struct cam_cdm_bl_request)) +
+				((CAM_ISP_CTX_CFG_MAX - 1) *
+				sizeof(struct cam_cdm_bl_cmd))), GFP_KERNEL);
+		#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 		if (!g_tfe_hw_mgr.ctx_pool[i].cdm_cmd) {
 			rc = -ENOMEM;
 			CAM_ERR(CAM_ISP, "Allocation Failed for cdm command");

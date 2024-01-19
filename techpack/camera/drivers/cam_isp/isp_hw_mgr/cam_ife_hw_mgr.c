@@ -2229,11 +2229,6 @@ static int cam_ife_hw_mgr_acquire_res_ife_csid_rdi(
 		csid_acquire.drop_enable = true;
 		csid_acquire.crop_enable = true;
 
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-		//lanhe add
-		csid_acquire.use_rdi_sof = ife_ctx->use_rdi_sof;
-#endif
-
 		if (in_port->usage_type)
 			csid_acquire.sync_mode = CAM_ISP_HW_SYNC_MASTER;
 		else
@@ -3162,10 +3157,6 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 
 	ife_ctx->hw_mgr = ife_hw_mgr;
 	ife_ctx->cdm_ops =  cam_cdm_publish_ops();
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-    //lanhe add
-    ife_ctx->use_rdi_sof = acquire_args->use_rdi_sof;
-#endif
 
 	acquire_hw_info =
 		(struct cam_isp_acquire_hw_info *)acquire_args->acquire_info;
@@ -7952,20 +7943,8 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 	case CAM_ISP_HW_VFE_IN_RDI1:
 	case CAM_ISP_HW_VFE_IN_RDI2:
 	case CAM_ISP_HW_VFE_IN_RDI3:
-#ifndef OPLUS_FEATURE_CAMERA_COMMON //lanhe todo:
 		if (!ife_hw_mgr_ctx->is_rdi_only_context)
 			break;
-#else
-		if (!ife_hw_mgr_ctx->is_rdi_only_context && !ife_hw_mgr_ctx->use_rdi_sof)
-			break;
-		if(ife_hw_mgr_ctx->use_rdi_sof)
-		{
-			sof_done_event_data.res_id = event_info->res_id;//for hack RDI SOF just for timestamp backup
-			ife_hw_irq_sof_cb(ife_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_SOF, (void *)&sof_done_event_data);
-			break;
-		}
-#endif
 		cam_ife_mgr_cmd_get_sof_timestamp(ife_hw_mgr_ctx,
 			&sof_done_event_data.timestamp,
 			&sof_done_event_data.boot_time);
@@ -8412,10 +8391,18 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 				&g_ife_hw_mgr.ctx_pool[i].free_res_list);
 		}
 
+		#ifndef OPLUS_FEATURE_CAMERA_COMMON
 		g_ife_hw_mgr.ctx_pool[i].cdm_cmd =
 			kzalloc(((sizeof(struct cam_cdm_bl_request)) +
 				((CAM_ISP_CTX_CFG_MAX - 1) *
-				 sizeof(struct cam_cdm_bl_cmd))), GFP_KERNEL);
+				sizeof(struct cam_cdm_bl_cmd))), GFP_KERNEL);
+		#else
+		g_ife_hw_mgr.ctx_pool[i].cdm_cmd =
+			kzalloc(((sizeof(struct cam_cdm_bl_request)) +
+				((CAM_ISP_CTX_CFG_MAX - 1) *
+				sizeof(struct cam_cdm_bl_cmd))), GFP_KERNEL);
+		#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
+
 		if (!g_ife_hw_mgr.ctx_pool[i].cdm_cmd) {
 			rc = -ENOMEM;
 			CAM_ERR(CAM_ISP, "Allocation Failed for cdm command");

@@ -20,11 +20,6 @@
 #define CAM_TFE_HW_NUM_MAX   3
 #define CAM_TFE_RDI_NUM_MAX  3
 
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-//lanhe add
-#define CAM_IFE_CTX_RDI_SOF_EN BIT(31)
-#endif
-
 /* maximum context numbers for TFE */
 #define CAM_TFE_CTX_MAX      4
 
@@ -34,11 +29,17 @@
 /* Appliacble vote paths for dual ife, based on no. of UAPI definitions */
 #define CAM_ISP_MAX_PER_PATH_VOTES 40
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*
  * Maximum configuration entry size  - This is based on the
  * worst case DUAL IFE use case plus some margin.
  */
 #define CAM_ISP_CTX_CFG_MAX                     25
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 /**
  *  enum cam_isp_hw_event_type - Collection of the ISP hardware events
@@ -166,9 +167,6 @@ struct cam_isp_prepare_hw_update_data {
  *
  */
 struct cam_isp_hw_sof_event_data {
-#ifdef OPLUS_FEATURE_CAMERA_COMMON//lanhe todo
-	uint32_t       res_id;
-#endif
 	uint64_t       timestamp;
 	uint64_t       boot_time;
 };

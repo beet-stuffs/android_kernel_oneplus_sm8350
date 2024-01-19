@@ -180,10 +180,16 @@ void cam_cdm_notify_clients(struct cam_hw_info *cdm_hw,
 			(struct cam_cdm_bl_cb_request_entry *)data;
 
 		client_idx = CAM_CDM_GET_CLIENT_IDX(node->client_hdl);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+                mutex_lock(&cdm_hw->hw_mutex);
+#endif
 		client = core->clients[client_idx];
 		if ((!client) || (client->handle != node->client_hdl)) {
 			CAM_ERR(CAM_CDM, "Invalid client %pK hdl=%x", client,
 				node->client_hdl);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+1                        mutex_unlock(&cdm_hw->hw_mutex);
+#endif
 			return;
 		}
 		cam_cdm_get_client_refcount(client);
@@ -202,6 +208,9 @@ void cam_cdm_notify_clients(struct cam_hw_info *cdm_hw,
 		}
 		mutex_unlock(&client->lock);
 		cam_cdm_put_client_refcount(client);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+                mutex_unlock(&cdm_hw->hw_mutex);
+#endif
 		return;
 	} else if (status == CAM_CDM_CB_STATUS_HW_RESET_DONE ||
 			status == CAM_CDM_CB_STATUS_HW_FLUSH ||
@@ -239,6 +248,9 @@ void cam_cdm_notify_clients(struct cam_hw_info *cdm_hw,
 
 	for (i = 0; i < CAM_PER_CDM_MAX_REGISTERED_CLIENTS; i++) {
 		if (core->clients[i] != NULL) {
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+                        mutex_lock(&cdm_hw->hw_mutex);
+#endif
 			client = core->clients[i];
 			cam_cdm_get_client_refcount(client);
 			mutex_lock(&client->lock);
@@ -261,6 +273,9 @@ void cam_cdm_notify_clients(struct cam_hw_info *cdm_hw,
 			}
 			mutex_unlock(&client->lock);
 			cam_cdm_put_client_refcount(client);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+                        mutex_unlock(&cdm_hw->hw_mutex);
+#endif
 		}
 	}
 }

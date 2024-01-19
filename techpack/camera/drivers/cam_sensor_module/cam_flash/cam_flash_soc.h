@@ -10,6 +10,8 @@
 
 int cam_flash_get_dt_data(struct cam_flash_ctrl *fctrl,
 	struct cam_hw_soc_info *soc_info);
+int cam_i2c_flash_get_dt_data(struct cam_flash_ctrl *fctrl,
+    struct cam_hw_soc_info *soc_info);
 
 void cam_flash_put_source_node_data(struct cam_flash_ctrl *fctrl);
 #endif /*_CAM_FLASH_SOC_H_*/

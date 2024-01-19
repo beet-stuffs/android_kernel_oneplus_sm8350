@@ -48,6 +48,10 @@
 #define CAM_FLASH_PACKET_OPCODE_NON_REALTIME_SET_OPS 2
 #define CAM_FLASH_PACKET_OPCODE_STREAM_OFF           3
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
+
 struct cam_flash_ctrl;
 
 enum cam_flash_switch_trigger_ops {
@@ -220,13 +224,16 @@ struct cam_flash_ctrl {
 	struct camera_io_master             io_master_info;
 	struct i2c_data_settings            i2c_data;
 	uint32_t                            last_flush_req;
-	uint32_t                            streamoff_count;
-	int32_t                             apply_streamoff;
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 	const char *                        flash_name;
-	/*Add by Fangyan @ Camera 2020/08/17 for flash current*/
+/*Add by Fangyan @ Camera 2020/08/17 for flash current*/
 	uint32_t                            flash_current;
+	uint32_t                            flash_index;
+/*Add by zhangming @ Camera 2022/05/16 for seprate pm8008 and wl2868c*/
+	bool                                pmic_pm8008;
 #endif
+	uint32_t                            streamoff_count;
+	int32_t                             apply_streamoff;
 };
 
 int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg);

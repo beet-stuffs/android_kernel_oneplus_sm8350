@@ -22,12 +22,7 @@
 
 #define         SEMCO_EEPROM_PACK_SIZE  128
 #define         SEMCO_EEPROM_TOTAL_SIZE 1792
-
-#define         EEPROM_TYPE_GT24P128C2CSLI_MW 0xFF
-#define         EEPROM_TYPE_P24C256CE4HMIR_MW 0x01
-
 uint64_t        total_size=0;
-bool is_gt24p128m = false, is_gt24p128w = false;
 extern bool chip_version_old;
 
 struct cam_sensor_i2c_reg_array sem1215s_wp_disable_setting[] = {
@@ -328,11 +323,6 @@ uint8_t    EEPROM_Sem1215sWrite(struct cam_eeprom_ctrl_t *e_ctrl,
         = (struct cam_sensor_i2c_reg_array *)kmalloc((sizeof(struct cam_sensor_i2c_reg_array) * SEMCO_EEPROM_PACK_SIZE),
         GFP_KERNEL);
 
-    if (i2c_reg_arrays == NULL) {
-        CAM_ERR(CAM_EEPROM, "i2c_reg_arrays kmalloc failed!");
-        return -EINVAL;
-    }
-
     if (e_ctrl == NULL) {
         CAM_ERR(CAM_EEPROM, "Invalid Args");
         kfree(i2c_reg_arrays);
@@ -438,55 +428,6 @@ int32_t EEPROM_ControlWrite(struct cam_eeprom_ctrl_t *e_ctrl,
     }
 
     return( 0 );
-}
-
-int32_t EEPROM_CompatibleWrite(struct cam_eeprom_ctrl_t *e_ctrl,
-        struct cam_write_eeprom_t *cam_write_eeprom)
-{
-    int32_t  rc;
-    uint32_t typeAddr = 0x0;
-    uint32_t typeData = 0x0;
-
-    if (is_gt24p128m == true)
-        typeAddr = 0x0D;
-    else if (is_gt24p128w == true)
-        typeAddr = 0x11;
-    else {
-        CAM_ERR(CAM_EEPROM, "failed to get eeprom flag address");
-        is_gt24p128m = false;
-        is_gt24p128w = false;
-        return -EINVAL;
-    }
-
-    is_gt24p128m = false;
-    is_gt24p128w = false;
-
-    rc = EEPROM_RamReadByte(e_ctrl, typeAddr, &typeData);
-    if (rc < 0) {
-        CAM_ERR(CAM_EEPROM, "failed to read eeprom type");
-        return rc;
-    } else {
-        CAM_INFO(CAM_EEPROM, "eeprom type: 0x%x", typeData);
-    }
-
-    if (typeData == EEPROM_TYPE_GT24P128C2CSLI_MW) {
-        rc = EEPROM_CommonWrite(e_ctrl, cam_write_eeprom);
-        if ( rc < 0 ) {
-            CAM_ERR(CAM_EEPROM, "EEPROM write gt24p128c2csli failed\n");
-            return rc;
-        }
-    } else if (typeData == EEPROM_TYPE_P24C256CE4HMIR_MW) {
-        rc = EEPROM_P24c256cWrite(e_ctrl, cam_write_eeprom);
-        if ( rc < 0 ) {
-            CAM_ERR(CAM_EEPROM, "EEPROM write P24c256c failed\n");
-            return rc;
-        }
-    } else {
-        CAM_ERR(CAM_EEPROM, "unsupported eeprom type: 0x%x", typeData);
-        return -EINVAL;
-    }
-
-    return rc;
 }
 
 int32_t EEPROM_Fm24pc256eWrite(struct cam_eeprom_ctrl_t *e_ctrl,
@@ -832,10 +773,6 @@ static int32_t cam_eeprom_write_data(struct cam_eeprom_ctrl_t *e_ctrl,
         is_sem1215s = true;
     } else if (e_ctrl->io_master_info.cci_client->sid == (0x48 >> 1)) {
         is_lc898128 = true;
-    } else if (strncmp(cam_write_eeprom.eepromName, "imx766_gt24p128c2csli_m", 23) == 0) {
-        is_gt24p128m = true;
-    } else if (strncmp(cam_write_eeprom.eepromName, "imx766_gt24p128c2csli_w", 23) == 0) {
-        is_gt24p128w = true;
     }
 
     //disable write protection
@@ -846,9 +783,7 @@ static int32_t cam_eeprom_write_data(struct cam_eeprom_ctrl_t *e_ctrl,
             rc = EEPROM_Lc898128Write(e_ctrl, &cam_write_eeprom);
         } else if (is_fm24pc256e) {
             rc = EEPROM_ControlWrite(e_ctrl, &cam_write_eeprom);
-        } else if (is_gt24p128m || is_gt24p128w) {
-            rc = EEPROM_CompatibleWrite(e_ctrl, &cam_write_eeprom);
-        } else {
+        }else {
             rc = EEPROM_CommonWrite(e_ctrl, &cam_write_eeprom);
         }
     }

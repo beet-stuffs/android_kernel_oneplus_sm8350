@@ -50,7 +50,11 @@
 #define OPE_CMDS                  OPE_MAX_CMD_BUFS
 #define CAM_MAX_IN_RES            8
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPE_MAX_CDM_BLS           24
+#else
 #define OPE_MAX_CDM_BLS           32
+#endif
 
 #define CAM_OPE_MAX_PER_PATH_VOTES 6
 #define CAM_OPE_BW_CONFIG_UNKNOWN  0
@@ -62,6 +66,11 @@
 #define OPE_DEVICE_IDLE_TIMEOUT    400
 #define OPE_REQUEST_RT_TIMEOUT        200
 #define OPE_REQUEST_NRT_TIMEOUT        400
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPE_REQUEST_TIMEOUT        200
+#else
+#define OPE_REQUEST_TIMEOUT        500
+#endif
 
 /**
  * struct cam_ope_clk_bw_request_v2
