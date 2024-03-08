@@ -12,7 +12,7 @@
  */
 
 
-#define DEBUG
+/*#define DEBUG*/
 #define LOG_FLAG	"sia81xx_set_vdd"
 
 
@@ -27,7 +27,6 @@
 #include "sia81xx_regmap.h"
 #include "sia81xx_set_vdd.h"
 
-//#define SIXTH_CORE_V2_0
 
 #define TIMER_TASK_PROC_NAME			("auto_set_vdd")
 
@@ -41,14 +40,10 @@
 
 #define DEFAULT_MODULE_ID				(0x1000E900)
 #define DEFAULT_PARAM_ID				(0x1000EA03)
-#ifdef SIXTH_CORE_V2_0
-#define COMPONENT_ID					(66)//ID_VDD,66 0x42
-#else
-#define COMPONENT_ID					(50)//ID_VDD,50 0x32
-#endif
 #define VDD_DEFAULT_VAL					(3300000)//3.3v
 #define VDD_MSG_INVALID_VAL				(0xFFFFFFFF);
 
+extern int g_algo_is_v2;
 
 typedef struct sia81xx_set_vdd_info {
 	uint32_t timer_task_hdl;
@@ -68,23 +63,38 @@ typedef struct sia81xx_set_vdd_info {
 	uint32_t param_id;
 }SIA81XX_SET_VDD_INFO;
 
-typedef struct sia81xx_vdd_msg {
+
+typedef struct sia81xx_vdd_msg_v1 {
 	uint32_t vdd; //uv
 	uint32_t p0;
 	uint32_t p1;
 	uint32_t p2;
-#ifdef SIXTH_CORE_V2_0
-	uint32_t p3;
-	uint32_t p4;
-#endif
-} __packed SIA81XX_VDD_MSG;
+} __packed SIA81XX_VDD_MSG_V1;
 
-typedef struct sia81xx_vdd_param {
+typedef struct sia81xx_vdd_param_v1 {
 	uint32_t proc_code;
 	uint32_t id;
 	uint32_t msg_len;
-	SIA81XX_VDD_MSG msg;
-} __packed SIA81XX_VDD_PARAM;
+	SIA81XX_VDD_MSG_V1 msg;
+} __packed SIA81XX_VDD_PARAM_V1;
+
+
+typedef struct sia81xx_vdd_msg_v2 {
+	uint32_t vdd; //uv
+	uint32_t p0;
+	uint32_t p1;
+	uint32_t p2;
+	uint32_t p3;
+	uint32_t p4;
+} __packed SIA81XX_VDD_MSG_V2;
+
+typedef struct sia81xx_vdd_param_v2 {
+	uint32_t proc_code;
+	uint32_t id;
+	uint32_t msg_len;
+	SIA81XX_VDD_MSG_V2 msg_v2;
+} __packed SIA81XX_VDD_PARAM_V2;
+
 
 static struct sia81xx_set_vdd_info info_table[MAX_SET_VDD_INFO_NUM];
 
@@ -93,18 +103,18 @@ static uint32_t sia81xx_read_cur_battery_voltage(void)
 		union power_supply_propval val;
 		struct power_supply *psy = power_supply_get_by_name("battery");
 		uint32_t vdd_val;
-	
+
 		if(NULL == psy) {
 			vdd_val = VDD_DEFAULT_VAL;
 			goto end;
 		}
-		
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
 		if(NULL == psy->desc->get_property) {
 			vdd_val = VDD_DEFAULT_VAL;
 			goto end;
 		}
-	
+
 		if(0 != psy->desc->get_property(
 					psy, POWER_SUPPLY_PROP_VOLTAGE_NOW, &val)) {
 			vdd_val = VDD_DEFAULT_VAL;
@@ -115,13 +125,13 @@ static uint32_t sia81xx_read_cur_battery_voltage(void)
 			vdd_val = VDD_DEFAULT_VAL;
 			goto end;
 		}
-	
+
 		if(0 != psy->get_property(psy, POWER_SUPPLY_PROP_VOLTAGE_NOW, &val)) {
 			vdd_val = VDD_DEFAULT_VAL;
 			goto end;
 		}
 #endif
-	
+
 		vdd_val = val.intval;
 
 end :
@@ -253,14 +263,15 @@ static void delete_all_info(void)
 		}
 	}
 }
-
+//v1.0+v2.0
 static void send_set_vdd_msg(
-	struct sia81xx_set_vdd_info *info, 
-	uint32_t vdd, 
-	uint32_t channel_num) 
+	struct sia81xx_set_vdd_info *info,
+	uint32_t vdd,
+	uint32_t channel_num)
 {
 	int ret = 0;
-	SIA81XX_VDD_PARAM param;
+	SIA81XX_VDD_PARAM_V1 param;
+	SIA81XX_VDD_PARAM_V2 param_v2;
 
 	if(NULL == tuning_if_opt.write) {
 		pr_err("[  err][%s] %s: NULL == tuning_if_opt.opt.write \r\n",
@@ -268,27 +279,46 @@ static void send_set_vdd_msg(
 		return ;
 	}
 
-	param.id = COMPONENT_ID;//ID_VDD
-	param.msg_len = sizeof(SIA81XX_VDD_MSG);
-	param.proc_code = channel_num;// ch sn
-	
-	param.msg.vdd = vdd;
-	/* don't set these in driver, it should be setted at acdb and it's fixed */
-	param.msg.p0 = VDD_MSG_INVALID_VAL;
-	param.msg.p1 = VDD_MSG_INVALID_VAL;
-	param.msg.p2 = VDD_MSG_INVALID_VAL;
-#ifdef SIXTH_CORE_V2_0
-	param.msg.p3 = VDD_MSG_INVALID_VAL;
-	param.msg.p4 = VDD_MSG_INVALID_VAL;
-#endif
+	if(0 == g_algo_is_v2) {
+		param.id = 50;//ID_VDD
+		param.msg_len = sizeof(SIA81XX_VDD_MSG_V1);
+		param.proc_code = channel_num;// ch sn
 
-	ret = tuning_if_opt.write(
-		info->cal_handle, 
-		info->module_id, 
-		info->param_id, 
-		(uint32_t)sizeof(param), 
-		(uint8_t *)&param);
-	
+		param.msg.vdd = vdd;
+		/* don't set these in driver, it should be setted at acdb and it's fixed */
+		param.msg.p0 = VDD_MSG_INVALID_VAL;
+		param.msg.p1 = VDD_MSG_INVALID_VAL;
+		param.msg.p2 = VDD_MSG_INVALID_VAL;
+
+		ret = tuning_if_opt.write(
+			info->cal_handle,
+			info->module_id,
+			info->param_id,
+			(uint32_t)sizeof(param),
+			(uint8_t *)&param);
+	} else {
+		param_v2.id = 66;//ID_VDD
+		param_v2.msg_len = sizeof(SIA81XX_VDD_MSG_V2);
+		param_v2.proc_code = channel_num;// ch sn
+
+		param_v2.msg_v2.vdd = vdd;
+
+		/* don't set these in driver, it should be setted at acdb and it's fixed */
+		param_v2.msg_v2.p0 = VDD_MSG_INVALID_VAL;
+		param_v2.msg_v2.p1= VDD_MSG_INVALID_VAL;
+		param_v2.msg_v2.p2 = VDD_MSG_INVALID_VAL;
+
+		param_v2.msg_v2.p3 = VDD_MSG_INVALID_VAL;
+		param_v2.msg_v2.p4 = VDD_MSG_INVALID_VAL;
+
+		ret = tuning_if_opt.write(
+			info->cal_handle,
+			info->module_id,
+			info->param_id,
+			(uint32_t)sizeof(param_v2),
+			(uint8_t *)&param_v2);
+	}
+
 	if(0 > ret) {
 		pr_err("[debug][%s] %s: tuning_if_opt.write failed "
 			"ret = %d \r\n", 
@@ -298,6 +328,7 @@ static void send_set_vdd_msg(
 
 	return ;
 }
+
 
 static int sia81xx_open_set_vdd_server(
 	uint32_t timer_task_hdl, 

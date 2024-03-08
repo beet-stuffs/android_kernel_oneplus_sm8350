@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#define DEBUG
+/*#define DEBUG*/
 #define LOG_FLAG	"sia8159_regs"
 
 #include <linux/delay.h>
@@ -21,113 +21,193 @@
 #include "sia81xx_regmap.h"
 #include "sia8159_regs.h"
 
-#define SIA8159_WRITEABLE_REG_NUM			(10)
+#define SIA8159_WRITEABLE_REG_NUM			(20)
 
 static const char sia8159_palyback_defaults[][SIA8159_WRITEABLE_REG_NUM] = {
 	[SIA81XX_CHANNEL_L] = {
-				0xBD,		//SIA8159_REG_SYSCTRL
+				0x7c,		//SIA8159_REG_SYSCTRL
 				0x20,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x0e,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	},
 	[SIA81XX_CHANNEL_R] = {
-				0xBD,		//SIA8159_REG_SYSCTRL
+				0x7c,		//SIA8159_REG_SYSCTRL
 				0x20,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x08,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	}
 };
 
 static const char sia8159_voice_defaults[][SIA8159_WRITEABLE_REG_NUM] = {
 	[SIA81XX_CHANNEL_L] = {
-				0xBD,		//SIA8159_REG_SYSCTRL
-				0x20,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x7d,		//SIA8159_REG_SYSCTRL
+				0x00,		//SIA8159_REG_ALGO_EN
+				0x0e,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	},
 	[SIA81XX_CHANNEL_R] = {
-				0xBD,		//SIA8159_REG_SYSCTRL
-				0x20,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x7d,		//SIA8159_REG_SYSCTRL
+				0x00,		//SIA8159_REG_ALGO_EN
+				0x08,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	}
 };
 
 static const char sia8159_receiver_defaults[][SIA8159_WRITEABLE_REG_NUM] = {
 	[SIA81XX_CHANNEL_L] = {
-				0xAB,		//SIA8159_REG_SYSCTRL
+				0x7d,		//SIA8159_REG_SYSCTRL
 				0x20,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x0c,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	},
 	[SIA81XX_CHANNEL_R] = {
-				0xAB,		//SIA8159_REG_SYSCTRL
-				0x20,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x6b,		//SIA8159_REG_SYSCTRL
+				0x00,		//SIA8159_REG_ALGO_EN
+				0x08,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
-				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x45,		//SIA8159_REG_ALGO_CFG3
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	}
 };
 
 static const char sia8159_factory_defaults[][SIA8159_WRITEABLE_REG_NUM] = {
 	[SIA81XX_CHANNEL_L] = {
-				0xBD,		//SIA8159_REG_SYSCTRL
-				0x27,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x7d,		//SIA8159_REG_SYSCTRL
+				0x20,		//SIA8159_REG_ALGO_EN
+				0x0e,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	},
 	[SIA81XX_CHANNEL_R] = {
-				0xBD,		//SIA8159_REG_SYSCTRL
-				0x27,		//SIA8159_REG_ALGO_EN
-				0xAE,		//SIA8159_REG_BST_CFG
-				0xC9,		//SIA8159_REG_CLSD_CFG
+				0x7d,		//SIA8159_REG_SYSCTRL
+				0x20,		//SIA8159_REG_ALGO_EN
+				0x08,		//SIA8159_REG_BST_CFG
+				0xc1,		//SIA8159_REG_CLSD_CFG
 				0x00,		//SIA8159_REG_ALGO_CFG1
 				0x28,		//SIA8159_REG_ALGO_CFG2
 				0x73,		//SIA8159_REG_ALGO_CFG3
-				0x88,		//SIA8159_REG_ALGO_CFG4
-				0x0D,		//SIA8159_REG_ALGO_CFG5
-				0xA4		//SIA8159_REG_CLSD_OCPCFG
+				0x8a,		//SIA8159_REG_ALGO_CFG4
+				0x0d,		//SIA8159_REG_ALGO_CFG5
+				0xe4,		//SIA8159_REG_CLSD_OCPCFG
+				0x00,		//0x0B
+				0x00,		//0x0C
+				0x00,		//0x0D
+				0x00,		//0x0E
+				0x00,		//0x0F
+				0x00,		//0x10
+				0x00,		//0x11
+				0x00,		//0x12
+				0x00,		//0x13
+				0x80		//0x14
 	}
 };
 
@@ -234,12 +314,29 @@ static void sia8159_chip_on(
 {
 	char val = 0;
 
+	if (AUDIO_SCENE_NUM <= scene || SIA81XX_CHANNEL_NUM <= channel_num)
+		return;
+
 	if (0 != sia81xx_regmap_read(regmap, SIA8159_REG_ALGO_CFG1, 1, &val))
 		return;
 
 	val |= 0x01;
 	if (0 != sia81xx_regmap_write(regmap, SIA8159_REG_ALGO_CFG1, 1, &val))
 		return;
+
+	if (0 != sia81xx_regmap_write(regmap, SIA8159_REG_BST_CFG, 2, 
+		&(sia8159_reg_default_val.reg_defaults[scene].vals + 
+			channel_num * sia8159_reg_default_val.reg_defaults[scene].num)
+			[SIA8159_REG_BST_CFG - sia8159_reg_default_val.offset]))
+		return;
+
+	sia81xx_regmap_write(regmap, 
+		SIA8159_REG_ALGO_CFG2,
+		sia8159_reg_default_val.reg_defaults[scene].num - 
+			(SIA8159_REG_ALGO_CFG2 - sia8159_reg_default_val.offset),
+		&(sia8159_reg_default_val.reg_defaults[scene].vals + 
+			channel_num * sia8159_reg_default_val.reg_defaults[scene].num)
+			[SIA8159_REG_ALGO_CFG2 - sia8159_reg_default_val.offset]);
 }
 
 static void sia8159_chip_off(
@@ -249,6 +346,9 @@ static void sia8159_chip_off(
 
 	if (0 != sia81xx_regmap_write(regmap, SIA8159_REG_ALGO_CFG1, 1, &val))
 		return;
+
+	/* wait chip power down */
+	msleep(1);
 
 	val = 0x41;
 	if (0 != sia81xx_regmap_write(regmap, SIA8159_REG_SYSCTRL, 1, &val))
@@ -269,6 +369,7 @@ static void sia8159_check_trimming(
 	static const char defaults[1024] = {0x76, 0x66, 0x70};
 	uint8_t vals[1024] = {0};
 	uint8_t crc = 0;
+	uint8_t i, tmp;
 
 	/* wait reading trimming data to reg */
 	mdelay(1);
@@ -279,6 +380,12 @@ static void sia8159_check_trimming(
 
 	crc = vals[reg_num - 1] & 0x0F;
 	vals[reg_num - 1] &= 0xF0;
+
+	for (i = 0; i < reg_num / 2; i++) {
+		tmp = vals[i];
+		vals[i] = vals[reg_num - i - 1];
+		vals[reg_num - i - 1] = tmp;
+	}
 
 	if (crc != crc4_itu(vals, reg_num)) {
 		pr_warn("[ warn][%s] %s: trimming failed !! \r\n", 
@@ -296,12 +403,28 @@ static void sia8159_check_trimming(
 	}
 }
 
+static bool sia8159_get_chip_en(
+	struct regmap *regmap)
+{
+	char val = 0;
+
+	if (0 != sia81xx_regmap_read(regmap, SIA8159_REG_ALGO_CFG1, 1, &val)) {
+		return false;
+	}
+
+	if (val & 0x01) {
+		return true;
+	}
+
+	return false;
+}
+
 const struct sia81xx_opt_if sia8159_opt_if = {
 	.check_chip_id = sia8159_check_chip_id,
 	.set_xfilter = NULL,
 	.chip_on = sia8159_chip_on,
 	.chip_off = sia8159_chip_off,
-	.get_chip_en = NULL,
+	.get_chip_en = sia8159_get_chip_en,
 	.set_pvdd_limit = NULL,
 	.check_trimming = sia8159_check_trimming,
 };

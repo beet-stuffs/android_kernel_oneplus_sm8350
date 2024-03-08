@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#define DEBUG
+/*#define DEBUG*/
 #define LOG_FLAG	"sia8109_regs"
 
 #include <linux/delay.h>

@@ -12,7 +12,7 @@
  */
 
 
-#define DEBUG
+/*#define DEBUG*/
 #define LOG_FLAG	"sia81xx_sock"
 
 #include <linux/slab.h>
