@@ -2230,6 +2230,8 @@ static int oplus_discrete_batt_get_prop(struct power_supply *psy,
 			}
 			break;
 		case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+			val->intval = chip->batt_capacity_mah * 1000;
+			break;
 		case POWER_SUPPLY_PROP_CHARGE_FULL:
 			val->intval = chip->batt_fcc * UNIT_TRANS_1000;
 			break;
