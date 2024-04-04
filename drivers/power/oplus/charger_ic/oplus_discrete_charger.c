@@ -2240,7 +2240,7 @@ static int oplus_discrete_batt_get_prop(struct power_supply *psy,
 			val->intval = chip->ui_soc * chip->batt_capacity_mah * UNIT_TRANS_1000 / FULL_SOC;
 			break;
 		case POWER_SUPPLY_PROP_CYCLE_COUNT:
-                        val->intval = chip->charger_cycle;
+                        val->intval = oplus_gauge_get_batt_cc();
                         break;
 		default:
 			rc = oplus_battery_get_property(psy, psp, val);
