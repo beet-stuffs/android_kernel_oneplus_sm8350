@@ -670,7 +670,7 @@
 #define USB_SID_DISPLAYPORT	0xff01	/* display port */
 #define USB_VID_RICHTEK		0x29cf  /* demo uvdm */
 #define USB_VID_DIRECTCHARGE	0x29cf  /* direct charge */
-#define USB_VID_OPLUS		0x22d9
+#define USB_VID_OPPO		0x22d9
 
 /* PD counter definitions */
 #define PD_MESSAGE_ID_COUNT	7

@@ -94,8 +94,8 @@ static const struct svdm_svid_ops svdm_svid_ops[] = {
 	},
 #endif	/* CONFIG_USB_PD_ALT_MODE_RTDC */
 	{
-		.name = "Oplus",
-		.svid = USB_VID_OPLUS,
+		.name = "Oppo",
+		.svid = USB_VID_OPPO,
 	},
 };
 
