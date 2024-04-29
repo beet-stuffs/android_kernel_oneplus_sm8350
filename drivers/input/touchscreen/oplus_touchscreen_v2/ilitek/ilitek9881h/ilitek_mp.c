@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ * Copyright (C) 2018-2020 oppo. All rights reserved.
  */
 
 #include "ilitek.h"
@@ -2130,7 +2130,7 @@ int ilitek_tddi_mp_test_handler(char *apk, struct seq_file *s,
 	u8 tp_mode = P5_X_FW_TEST_MODE;
 	struct ilitek_tddi_dev *chip_info = (struct ilitek_tddi_dev *)chip_data;
 
-	enable_irq(chip_info->irq_num);/*because oplus disable*/
+	enable_irq(chip_info->irq_num);/*because oppo disable*/
 
 	if (atomic_read(&chip_info->fw_stat)) {
 		TPD_INFO("fw upgrade processing, ignore\n");

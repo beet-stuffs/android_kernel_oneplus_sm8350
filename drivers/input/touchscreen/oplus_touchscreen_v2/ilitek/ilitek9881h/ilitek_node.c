@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ * Copyright (C) 2018-2020 oppo. All rights reserved.
  */
 
 #include "ilitek.h"
@@ -1169,13 +1169,13 @@ static ssize_t ilitek_node_ioctl_write(struct file *filp, const char *buff,
 		chip_info->esd_check_enabled = true;
 
 	} else if (strcmp(cmd, "enablewqbat") == 0) {
-		TPD_INFO("oplus kit ctrl this\n");
+		TPD_INFO("oppo kit ctrl this\n");
 
 	} else if (strcmp(cmd, "disablewqesd") == 0) {
 		chip_info->esd_check_enabled = false;
 
 	} else if (strcmp(cmd, "disablewqbat") == 0) {
-		TPD_INFO("oplus kit ctrl this\n");
+		TPD_INFO("oppo kit ctrl this\n");
 
 	} else if (strcmp(cmd, "gesture") == 0) {
 		chip_info->gesture = !chip_info->gesture;
