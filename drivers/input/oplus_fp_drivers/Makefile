@@ -1,4 +1,4 @@
-obj-$(CONFIG_OPLUS_FINGERPRINT_COMMON) += oplus_fp_common/
+obj-$(CONFIG_OPLUS_FINGERPRINT) += oplus_fp_common/
 
 ### Capacitive fingerprint sensor
 obj-$(CONFIG_OPLUS_FINGERPRINT_FPC) += fpc/

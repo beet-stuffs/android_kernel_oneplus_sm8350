@@ -28,6 +28,7 @@
 //static struct pinctrl *gf_irq_pinctrl = NULL;
 //static struct pinctrl_state *gf_irq_no_pull = NULL;
 int g_cs_gpio_disable;
+int g_cs_init_finish = 0;
 
 #ifndef USED_GPIO_PWR
 static int vreg_setup(struct gf_dev *goodix_fp, fp_power_info_t *pwr_info,
@@ -267,7 +268,12 @@ int gf_parse_dts(struct gf_dev* gf_dev)
     }
 
     /*determine if it's optical*/
-    if (FP_GOODIX_5658 == get_fpsensor_type() || FP_GOODIX_3626 == get_fpsensor_type()) { //add new fpsensor if needed
+    if ( FP_GOODIX_5658 == get_fpsensor_type()
+        || FP_GOODIX_3626 == get_fpsensor_type()
+        || FP_GOODIX_3688 == get_fpsensor_type()
+        || FP_GOODIX_3956 == get_fpsensor_type()
+        || FP_GOODIX_3636 == get_fpsensor_type()
+        || FP_GOODIX_3976 == get_fpsensor_type() ) { // add new fpsensor if needed
         gf_dev->is_optical = false;
     }
     else {
@@ -279,6 +285,9 @@ int gf_parse_dts(struct gf_dev* gf_dev)
     if (rc) {
         dev_err(&pdev->dev, "failed to request gf,cs_gpio_disable, ret = %d\n", rc);
         g_cs_gpio_disable = 0;
+    }
+    if (g_cs_init_finish == 1) {
+        g_cs_gpio_disable = 1;
     }
 
     /*get clk pinctrl resource*/
@@ -470,31 +479,46 @@ int gf_power_off(struct gf_dev* gf_dev)
 
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
 {
-	if(gf_dev == NULL) {
-		pr_info("Input buff is NULL.\n");
-		return -1;
-	}
+    if (gf_dev == NULL) {
+        pr_info("Input buff is NULL.\n");
+        return -1;
+    }
 
-	gpio_set_value(gf_dev->reset_gpio, 0);
-	mdelay(20);
-	gpio_set_value(gf_dev->reset_gpio, 1);
+    gpio_set_value(gf_dev->reset_gpio, 0);
+    mdelay(20);
+    gpio_set_value(gf_dev->reset_gpio, 1);
         if (gf_dev->cs_gpio_set) {
                 pr_info("---- pull CS up and set CS from gpio to func ----");
                 gpio_set_value(gf_dev->cs_gpio, 1);
                 pinctrl_select_state(gf_dev->pinctrl, gf_dev->pstate_cs_func);
                 gf_dev->cs_gpio_set = false;
+                g_cs_init_finish = 1;
         }
-	mdelay(delay_ms);
-	return 0;
+    mdelay(delay_ms);
+    return 0;
+}
+int gf_power_reset(struct gf_dev *gf_dev)
+{
+    if (gf_dev == NULL) {
+        pr_info("Input buff is NULL.\n");
+        return -1;
+    }
+    gpio_set_value(gf_dev->reset_gpio, 0);
+    gf_power_off(gf_dev);
+    mdelay(50);
+    gf_power_on(gf_dev);
+    gpio_set_value(gf_dev->reset_gpio, 1);
+    mdelay(3);
+    return 0;
 }
 
 int gf_irq_num(struct gf_dev *gf_dev)
 {
-	if(gf_dev == NULL) {
-		pr_info("Input buff is NULL.\n");
-		return -1;
-	} else {
-		return gpio_to_irq(gf_dev->irq_gpio);
-	}
+    if (gf_dev == NULL) {
+        pr_info("Input buff is NULL.\n");
+        return -1;
+    } else {
+        return gpio_to_irq(gf_dev->irq_gpio);
+    }
 }
 

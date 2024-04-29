@@ -14,9 +14,10 @@
 #include <linux/delay.h>
 #include <linux/string.h>
 #include <linux/mutex.h>
-#include <soc/oplus/touchpanel_event_notify.h>
 #include "../include/oplus_fp_common.h"
-//extern char *saved_command_line;
+#include "../include/fingerprint_event.h"
+
+extern char *saved_command_line;
 
 #if defined(MTK_PLATFORM)
 // #include <sec_boot_lib.h>
@@ -57,12 +58,93 @@ char g_engineermode_menu_config[ENGINEER_MENU_SELECT_MAXLENTH] = ENGINEER_MENU_D
 static DEFINE_MUTEX(opticalfp_handler_lock);
 static opticalfp_handler g_opticalfp_irq_handler = NULL;
 
+
+static int get_manufacture_id_value(struct fp_data *fp_data)
+{
+    int ret = 0;
+    int32_t fp_id_gpio = 0;
+    uint32_t fp_id_value_up = 0;
+    uint32_t fp_id_value_down = 0;
+    struct pinctrl *fp_id_pinctrl = NULL;
+    struct pinctrl_state *fp_id_pull_up = NULL;
+    struct pinctrl_state *fp_id_pull_down = NULL;
+
+    dev_info(fp_data->dev, "get_manufacture_id_value in\n");
+
+    fp_id_pinctrl = devm_pinctrl_get(fp_data->dev);
+    if (IS_ERR_OR_NULL(fp_id_pinctrl)) {
+        dev_err(fp_data->dev, "falied to get pinctr handle\n");
+        return -FP_ERROR_GENERAL;
+    }
+
+    fp_id_pull_up = pinctrl_lookup_state(fp_id_pinctrl, "gpio_id0_up");
+    if (IS_ERR_OR_NULL(fp_id_pull_up)) {
+        dev_err(fp_data->dev, "falied to find pinctrl fp_id_pull_up!\n");
+        goto exit;
+    }
+
+    fp_id_pull_down = pinctrl_lookup_state(fp_id_pinctrl, "gpio_id0_down");
+    if (IS_ERR_OR_NULL(fp_id_pull_down)) {
+        dev_err(fp_data->dev, "falied to find pinctrl fp_id_pull_down!\n");
+        goto exit;
+    }
+
+    fp_id_gpio = of_get_named_gpio(fp_data->dev->of_node, "oplus,fp_gpio_0", 0);
+    if (fp_id_gpio < 0) {
+        dev_err(fp_data->dev, "falied to get id gpio!\n");
+        goto exit;
+    }
+
+    ret = pinctrl_select_state(fp_id_pinctrl, fp_id_pull_up);
+    if (ret) {
+        dev_err(fp_data->dev, "falied to select pinctrl fp_id_pull_up, ret = %d!\n", ret);
+        goto exit;
+    }
+    fp_id_value_up = gpio_get_value(fp_id_gpio); //first get fp_id
+    dev_info(fp_data->dev, "fp_id_value_up%d\n", fp_id_value_up);
+
+    ret = pinctrl_select_state(fp_id_pinctrl, fp_id_pull_down);
+    if (ret) {
+        dev_err(fp_data->dev, "falied to select pinctrl fp_id_pull_up, ret = %d!\n", ret);
+        goto exit;
+    }
+    fp_id_value_down = gpio_get_value(fp_id_gpio); //second get fp_id
+    dev_info(fp_data->dev, "fp_id_value_down%d\n", fp_id_value_down);
+
+    /*************************************
+    *    fp id define:
+    *    1 0 ->goodix
+    *    0 0 ->fpc
+    *    1 1 ->silead
+    *************************************/
+    if (fp_id_value_up == 1 && fp_id_value_down == 0) {
+        fp_data->fp_id[0] = 1;
+        dev_info(fp_data->dev, "fp_id: %d ->goodix\n", fp_data->fp_id[0]);
+    } else if (fp_id_value_up == 0 && fp_id_value_down == 0) {
+        fp_data->fp_id[0] = 0;
+        dev_info(fp_data->dev, "fp_id: %d ->fpc\n", fp_data->fp_id[0]);
+    } else if (fp_id_value_up == 1 && fp_id_value_down == 1) {
+        fp_data->fp_id[0] = 2;
+        dev_info(fp_data->dev, "fp_id: %d ->silead\n", fp_data->fp_id[0]);
+    } else {
+        dev_err(fp_data->dev, "fp_id not define, default is 0", ret);
+    }
+
+    devm_pinctrl_put(fp_id_pinctrl);
+    return FP_OK;
+
+exit:
+    devm_pinctrl_put(fp_id_pinctrl);
+    return -FP_ERROR_GENERAL;
+}
+
 static int fp_gpio_parse_parent_dts(struct fp_data *fp_data)
 {
     int ret = FP_OK;
     int fp_id_index = 0;
     struct device *dev = NULL;
     struct device_node *np = NULL;
+    int one_for_three = 0;
 
     if (!fp_data || !fp_data->dev) {
         ret = -FP_ERROR_GENERAL;
@@ -86,20 +168,35 @@ static int fp_gpio_parse_parent_dts(struct fp_data *fp_data)
 
     dev_info(fp_data->dev, "fp_id_amount: %d\n", fp_data->fp_id_amount);
 
-    for (fp_id_index = 0; fp_id_index < fp_data->fp_id_amount; fp_id_index++) {
-        char fp_gpio_current_node[FP_ID_MAX_LENGTH] = {0};
-        snprintf(fp_gpio_current_node, FP_ID_MAX_LENGTH - 1, "%s%d", FP_GPIO_PREFIX_NODE, fp_id_index);
-        dev_info(fp_data->dev, "fp_gpio_current_node: %s\n", fp_gpio_current_node);
-        fp_data->gpio_index[fp_id_index] = of_get_named_gpio(np, fp_gpio_current_node, 0);
-        if (fp_data->gpio_index[fp_id_index] < 0) {
-            dev_err(fp_data->dev, "the param %s is not found !\n", fp_gpio_current_node);
-            ret = -FP_ERROR_GENERAL;
-            goto exit;
-        }
-        fp_data->fp_id[fp_id_index] = gpio_get_value(fp_data->gpio_index[fp_id_index]);
-        dev_info(fp_data->dev, "gpio_index: %d,fp_id: %d\n", fp_data->gpio_index[fp_id_index], fp_data->fp_id[fp_id_index]);
+    ret = of_property_read_u32(np, "oplus,one_gpio_for_three_ic", &one_for_three);
+    if (ret) {
+        dev_err(fp_data->dev, "oplus,one_gpio_for_three_ic is not define\n");
+        ret = FP_OK;
     }
-
+    if (one_for_three == 1) {
+        ret = get_manufacture_id_value(fp_data);
+        if (ret) {
+            dev_err(fp_data->dev, "get_manufacture_id_value failed\n");
+        } else {
+            dev_info(fp_data->dev, "get_manufacture_id_value success fp_id: %d\n", fp_data->fp_id[0]);
+        }
+        goto exit;
+    }
+    else {
+        for (fp_id_index = 0; fp_id_index < fp_data->fp_id_amount; fp_id_index++) {
+            char fp_gpio_current_node[FP_ID_MAX_LENGTH] = {0};
+            snprintf(fp_gpio_current_node, FP_ID_MAX_LENGTH - 1, "%s%d", FP_GPIO_PREFIX_NODE, fp_id_index);
+            dev_info(fp_data->dev, "fp_gpio_current_node: %s\n", fp_gpio_current_node);
+            fp_data->gpio_index[fp_id_index] = of_get_named_gpio(np, fp_gpio_current_node, 0);
+            if (fp_data->gpio_index[fp_id_index] < 0) {
+                dev_err(fp_data->dev, "the param %s is not found !\n", fp_gpio_current_node);
+                ret = -FP_ERROR_GENERAL;
+                goto exit;
+            }
+            fp_data->fp_id[fp_id_index] = gpio_get_value(fp_data->gpio_index[fp_id_index]);
+            dev_info(fp_data->dev, "gpio_index: %d,fp_id: %d\n", fp_data->gpio_index[fp_id_index], fp_data->fp_id[fp_id_index]);
+        }
+    }
 exit:
     return ret;
 }
@@ -160,34 +257,15 @@ void opticalfp_irq_handler_register(opticalfp_handler handler) {
         pr_err("%s handler is NULL", __func__);
     }
 }
-EXPORT_SYMBOL(opticalfp_irq_handler_register);
 
-static int opticalfp_irq_handler(struct fp_underscreen_info *tp_info) {
+int opticalfp_irq_handler(struct fp_underscreen_info* tp_info) {
     if (g_opticalfp_irq_handler) {
         return g_opticalfp_irq_handler(tp_info);
     } else {
         return FP_UNKNOWN;
     }
 }
-
-static int opticalfp_touch_event_notify(struct notifier_block *self, unsigned long action, void *data) {
-    struct touchpanel_event *event = (struct touchpanel_event *)data;
-    if (event) {
-        if (action == EVENT_ACTION_FOR_FINGPRINT) {
-            struct fp_underscreen_info tp_info;
-            tp_info.touch_state = (uint8_t)event->touch_state;
-            tp_info.area_rate = (uint8_t)event->area_rate;
-            tp_info.x = (uint16_t)event->x;
-            tp_info.y = (uint16_t)event->y;
-            opticalfp_irq_handler(&tp_info);
-        }
-    }
-    return NOTIFY_OK;
-}
-
-struct notifier_block _input_event_notifier = {
-    .notifier_call = opticalfp_touch_event_notify,
-};
+EXPORT_SYMBOL(opticalfp_irq_handler);
 
 static int fp_gpio_parse_child_dts(struct fp_data *fp_data)
 {
@@ -300,7 +378,15 @@ exit :
 }
 
 void read_lcd_type_proc_data(void) {
+    if (strstr(saved_command_line, "boe_")){
+        strncpy(lcd_manu, "boe", FP_ID_MAX_LENGTH - 1);
+    }else if(strstr(saved_command_line, "samsung_")){
         strncpy(lcd_manu, "samsung", FP_ID_MAX_LENGTH - 1);
+    } else if (strstr(saved_command_line, "tianma_")) {
+        strncpy(lcd_manu, "tm", FP_ID_MAX_LENGTH - 1);
+    }else {
+        strncpy(lcd_manu, CHIP_UNKNOWN, FP_ID_MAX_LENGTH - 1);
+    }
 }
 
 static ssize_t lcd_type_node_read(struct file *file, char __user *buf, size_t count, loff_t *pos) {
@@ -335,7 +421,12 @@ static struct file_operations lcd_type_node_ctrl = {
 static ssize_t fp_tee_node_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
 {
     char fp_state[32] = {'\0'};
-    if (copy_from_user(fp_state, buf, count) != 0) {
+    size_t local_count;
+    if (count <= 0) {
+        return 0;
+    }
+    local_count = (sizeof(fp_state) - 1) < count ? (sizeof(fp_state) - 1) : count;
+    if (copy_from_user(fp_state, buf, local_count) != 0) {
         dev_err(fp_data_ptr->dev, "write fp manu value fail\n");
         return -EFAULT;
     }
@@ -401,14 +492,13 @@ fp_vendor_t get_fpsensor_type(void)
 
     return fpsensor_type;
 }
-EXPORT_SYMBOL(get_fpsensor_type);
 
 static int oplus_fp_common_probe(struct platform_device *fp_dev)
 {
     int ret = 0;
     struct device *dev = &fp_dev->dev;
     struct fp_data *fp_data = NULL;
-
+    pr_err("%s enter", __func__);
     fp_data = devm_kzalloc(dev, sizeof(struct fp_data), GFP_KERNEL);
     if (fp_data == NULL) {
         dev_err(dev, "fp_data kzalloc failed\n");
@@ -441,16 +531,18 @@ static int oplus_fp_common_probe(struct platform_device *fp_dev)
         goto exit;
     }
 
-    ret = touchpanel_event_register_notifier(&_input_event_notifier);
-    if (ret < 0) {
-        dev_err(dev, "Touch Event Registration failed: %d\n", ret);
-        goto exit;
-    }
-
     ret = teecore_register_proc_fs();
     if (ret) {
         goto exit;
     }
+
+#ifdef FINGERPRINT_GKI_DISABLE
+    set_fp_driver_event_type(FP_DIRVER_NETLINK); // not gki
+#else
+    set_fp_driver_event_type(FP_DRIVER_INTERRUPT); // gki
+#endif
+    (void)fp_event_register_proc_fs();
+    pr_err("%s exit", __func__);
     return FP_OK;
 
 exit:
@@ -466,6 +558,8 @@ exit:
     dev_err(dev, "fp_data probe failed ret = %d\n", ret);
     if (fp_data) {
         devm_kfree(dev, fp_data);
+        fp_data = NULL;
+        fp_data_ptr = NULL;
     }
 
     return ret;
@@ -473,7 +567,6 @@ exit:
 
 static int oplus_fp_common_remove(struct platform_device *pdev)
 {
-    touchpanel_event_unregister_notifier(&_input_event_notifier);
     return FP_OK;
 }
 
@@ -494,15 +587,15 @@ static struct platform_driver oplus_fp_common_driver = {
 
 static int __init oplus_fp_common_init(void)
 {
+    pr_err("%s enter", __func__);
     return platform_driver_register(&oplus_fp_common_driver);
 }
 
 static void __exit oplus_fp_common_exit(void)
 {
+    pr_err("%s enter", __func__);
     platform_driver_unregister(&oplus_fp_common_driver);
 }
 
 subsys_initcall(oplus_fp_common_init);
 module_exit(oplus_fp_common_exit)
-MODULE_DESCRIPTION("oplus fingerprint common driver");
-MODULE_LICENSE("GPL");
