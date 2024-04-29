@@ -253,10 +253,11 @@ int oplus_gauge_get_batt_temperature(void)
 
 #ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 		if (get_eng_version() == HIGH_TEMP_AGING || oplus_is_ptcrb_version()) {
-			chg_err("[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here,"
-				"disable high tbat shutdown\n");
-			if (batt_temp > 690)
+			if (batt_temp > 690) {
+                        	chg_err("[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here,"
+                                	"disable high tbat shutdown\n");
 				batt_temp = 690;
+			}
 		}
 #endif
 		return batt_temp;
@@ -366,6 +367,15 @@ int oplus_gauge_get_device_type_for_vooc(void)
 	} else {
 		return g_gauge_chip->device_type_for_vooc;
 	}
+}
+
+void oplus_gauge_get_device_name(u8 *name, int len)
+{
+	if (!g_gauge_chip)
+		return;
+
+	if (g_gauge_chip->device_name && name)
+		strncpy(name, g_gauge_chip->device_name, len);
 }
 
 int oplus_gauge_get_batt_fcc(void)
@@ -547,6 +557,20 @@ int oplus_gauge_get_prev_batt_mvolts(void)
 	}
 }
 
+int oplus_gauge_get_sub_prev_batt_mvolts(void)
+{
+	if (!g_sub_gauge_chip || !g_sub_gauge_chip->gauge_ops || !g_sub_gauge_chip->gauge_ops->get_prev_battery_mvolts) {
+		return 3800;
+	} else {
+		if (sub_gauge_dbg_vbat != 0) {
+			chg_err("[OPLUS_CHG]%s:debug enabled,voltage sub_gauge_dbg_vbat[%d] \n", __func__,
+				sub_gauge_dbg_vbat);
+			return sub_gauge_dbg_vbat;
+		}
+		return g_sub_gauge_chip->gauge_ops->get_prev_battery_mvolts();
+	}
+}
+
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_FAULT_INJECT_CHG)
 noinline
 #endif
@@ -593,10 +617,11 @@ int oplus_gauge_get_prev_batt_temperature(void)
 
 #ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 		if (get_eng_version() == HIGH_TEMP_AGING || oplus_is_ptcrb_version()) {
-			chg_err("[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here,"
-				"disable high tbat shutdown \n");
-			if (batt_temp > 690)
+			if (batt_temp > 690) {
+				chg_err("[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here,"
+					"disable high tbat shutdown \n");
 				batt_temp = 690;
+			}
 		}
 #endif
 		return batt_temp;
@@ -811,6 +836,42 @@ int oplus_gauge_get_main_batt_soc(void)
 	}
 }
 
+int oplus_gauge_get_qmax(int *qmax1, int *qmax2)
+{
+	if (!g_gauge_chip) {
+		return -1;
+	} else {
+		return g_gauge_chip->gauge_ops->get_batt_qmax(qmax1, qmax2);
+	}
+}
+
+int oplus_gauge_get_fcc(int *fcc1, int *fcc2)
+{
+	if (!g_gauge_chip) {
+		return -1;
+	} else {
+		return g_gauge_chip->gauge_ops->get_batt_fcc(fcc1, fcc2);
+	}
+}
+
+int oplus_gauge_get_cc(int *cc1, int *cc2)
+{
+	if (!g_gauge_chip) {
+		return -1;
+	} else {
+		return g_gauge_chip->gauge_ops->get_batt_cc(cc1, cc2);
+	}
+}
+
+int oplus_gauge_get_soh(int *soh1, int *soh2)
+{
+	if (!g_gauge_chip) {
+		return -1;
+	} else {
+		return g_gauge_chip->gauge_ops->get_batt_soh(soh1, soh2);
+	}
+}
+
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_FAULT_INJECT_CHG)
 noinline
 #endif
@@ -842,10 +903,11 @@ int oplus_gauge_get_sub_batt_temperature(void)
 
 #ifndef CONFIG_DISABLE_OPLUS_FUNCTION
 		if (get_eng_version() == HIGH_TEMP_AGING || oplus_is_ptcrb_version()) {
-			chg_err("[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here,"
-				"disable high tbat shutdown\n");
-			if (batt_temp > 690)
+			if (batt_temp > 690) {
+				chg_err("[OPLUS_CHG]CONFIG_HIGH_TEMP_VERSION enable here,"
+					"disable high tbat shutdown\n");
 				batt_temp = 690;
+			}
 		}
 #endif
 		return batt_temp;
@@ -933,3 +995,40 @@ int oplus_gauge_soft_reset_rc_sfr(void)
 		return -1;
 	}
 }
+
+int oplus_gauge_get_info(u8 *info, int len)
+{
+	if (!g_gauge_chip)
+		return -1;
+	else {
+		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->get_gauge_info) {
+			return g_gauge_chip->gauge_ops->get_gauge_info(info, len);
+		}
+		return -1;
+	}
+}
+
+int oplus_sub_gauge_get_info(u8 *info, int len)
+{
+	if (!g_sub_gauge_chip)
+		return -1;
+	else {
+		if (g_sub_gauge_chip->gauge_ops && g_sub_gauge_chip->gauge_ops->get_gauge_info) {
+			return g_sub_gauge_chip->gauge_ops->get_gauge_info(info, len);
+		}
+		return -1;
+	}
+}
+
+void oplus_gauge_cal_model_check(bool ffc_state)
+{
+	if (!g_gauge_chip)
+		return;
+	else {
+		if (g_gauge_chip->gauge_ops && g_gauge_chip->gauge_ops->cal_model_check) {
+			return g_gauge_chip->gauge_ops->cal_model_check(ffc_state);
+		}
+		return;
+	}
+}
+

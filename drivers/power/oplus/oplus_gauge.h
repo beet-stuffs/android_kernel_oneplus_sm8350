@@ -16,6 +16,7 @@ struct oplus_gauge_chip {
 	struct oplus_gauge_operations *gauge_ops;
 	struct power_supply *batt_psy;
 	int device_type;
+	u8 *device_name;
 	int device_type_for_vooc;
 	int capacity_pct;
 };
@@ -100,6 +101,12 @@ struct oplus_gauge_operations {
 	bool (*set_gauge_power_sel)(int sel);
 	bool (*check_rc_sfr)(void);
 	int (*soft_reset_rc_sfr)(void);
+	int (*get_gauge_info)(u8 *info, int len);
+	int (*get_batt_qmax)(int *qmax1, int *qmax2);
+	int (*get_batt_fcc)(int *fcc1, int *fcc2);
+	int (*get_batt_cc)(int *cc1, int *cc2);
+	int (*get_batt_soh)(int *soh1, int *soh2);
+	void (*cal_model_check)(bool ffc_state);
 };
 
 /****************************************
@@ -174,6 +181,7 @@ int oplus_gauge_get_passedchg(int *val);
 void oplus_gauge_set_float_uv_ma(int iterm_ma, int float_volt_uv);
 int oplus_gauge_dump_register(void);
 int oplus_gauge_get_sub_batt_mvolts(void);
+int oplus_gauge_get_sub_prev_batt_mvolts(void);
 int oplus_gauge_get_sub_batt_current(void);
 int oplus_gauge_get_main_batt_soc(void);
 int oplus_gauge_get_sub_batt_soc(void);
@@ -192,6 +200,14 @@ int oplus_gauge_get_prev_bcc_parameters(char *buf);
 int oplus_gauge_set_bcc_parameters(const char *buf);
 bool oplus_gauge_check_rc_sfr(void);
 int oplus_gauge_soft_reset_rc_sfr(void);
+void oplus_gauge_get_device_name(u8 *name, int len);
+int oplus_gauge_get_info(u8 *info, int len);
+int oplus_sub_gauge_get_info(u8 *info, int len);
+int oplus_gauge_get_qmax(int *qmax1, int *qmax2);
+int oplus_gauge_get_fcc(int *fcc1, int *fcc2);
+int oplus_gauge_get_cc(int *cc1, int *cc2);
+int oplus_gauge_get_soh(int *soh1, int *soh2);
+void oplus_gauge_cal_model_check(bool ffc_state);
 
 #if defined(CONFIG_OPLUS_CHARGER_MTK6763) ||                                   \
 	defined(CONFIG_OPLUS_CHARGER_MTK6771)

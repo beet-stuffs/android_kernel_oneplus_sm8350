@@ -92,10 +92,19 @@
 #define SC8547_IBUS_UCP_FALL_DEGLITCH_SET_10US   0
 #define SC8547_IBUS_UCP_FALL_DEGLITCH_SET_5MS    1
 
+#define SC8547A_IBUS_UCP_FALL_DEGLITCH_SET_MASK   0x30
+#define SC8547A_IBUS_UCP_FALL_DEGLITCH_SET_SHIFT  4
+#define SC8547A_IBUS_UCP_FALL_DEGLITCH_SET_10US   0
+#define SC8547A_IBUS_UCP_FALL_DEGLITCH_SET_5MS    1
+#define SC8547A_IBUS_UCP_FALL_DEGLITCH_SET_50MS   2
+#define SC8547A_IBUS_UCP_FALL_DEGLITCH_SET_100MS  3
+
 #define	SC8547_IBUS_OCP_MASK                0x0F
 #define	SC8547_IBUS_OCP_SHIFT               0
 #define	SC8547_IBUS_OCP_BASE                1200
 #define	SC8547_IBUS_OCP_LSB                 300
+
+#define	SC8547A_IBUS_OCP_MASK                SC8547_IBUS_OCP_MASK
 
 /* Register 06h */
 #define SC8547_REG_06                       0x06
@@ -502,7 +511,6 @@
 /* Register 1Dh */
 #define SC8547_REG_1D                       0x1D
 #define SC8547_IBAT_POL_H_MASK              0x0F
-#define SC8547_IBAT_ADC_LSB                 125/100
 
 /* Register 1Eh */
 #define SC8547_REG_1E                       0x1E

@@ -38,7 +38,7 @@
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
-#include <soc/oplus/oplus_project.h>
+#include <soc/oppo/oppo_project.h>
 #include <mt-plat/charger_class.h>
 #include <mt-plat/charger_type.h>
 #else
@@ -1269,7 +1269,7 @@ static int rt9471_detach_irq_handler(struct rt9471_chip *chip)
 //#ifndef CONFIG_TCPC_CLASS
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
-	if(is_project(OPLUS_19741)) {
+	if(is_project(OPPO_19741)) {
 #else
 	if(is_project(OPLUS_19741)) {
 #endif
@@ -1369,7 +1369,7 @@ static int rt9471_vbus_gd_irq_handler(struct rt9471_chip *chip)
 //#ifndef CONFIG_TCPC_CLASS
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
-	if(is_project(OPLUS_19741)) {
+	if(is_project(OPPO_19741)) {
 #else
 	if(is_project(OPLUS_19741)) {
 #endif
@@ -2413,7 +2413,7 @@ static int rt9471_enable_chg_type_det(struct charger_device *chg_dev, bool en)
 	int ret = 0;
 #ifdef CONFIG_TCPC_CLASS
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
-	if(is_project(OPLUS_19747)) {
+	if(is_project(OPPO_19747)) {
 #else
 	if(is_project(OPLUS_19747)) {
 #endif
@@ -3134,7 +3134,7 @@ static int rt9471_probe(struct i2c_client *client,
 	}
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
-	if(is_project(OPLUS_19741)) {
+	if(is_project(OPPO_19741)) {
 #else
 	if(is_project(OPLUS_19741)) {
 #endif
