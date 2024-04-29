@@ -136,13 +136,13 @@
 		pinctrl-0 = <&gpio_id2_default>;
 		goodix_fp_3626 {
 			oplus,fp-id = <1>; /* fp id mapping table */
-			vendor-chip = <16>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.h */
+			vendor-chip = <16>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.h */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "G_3626";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
 		fpc_1542{
                         oplus,fp-id = <0>; /* fp id mapping table */
-                        vendor-chip = <19>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.h */
+                        vendor-chip = <19>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.h */
                         eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
                         chip-name = "F_1542";  /* /proc/fp_id, will be displayed in engineer menu  */
                 };

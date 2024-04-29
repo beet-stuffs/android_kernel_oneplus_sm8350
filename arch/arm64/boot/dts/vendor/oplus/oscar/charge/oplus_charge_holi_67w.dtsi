@@ -82,6 +82,8 @@
 		pinctrl-names = "typec_inter_active", "typec_inter_sleep";
 		pinctrl-0 = <&typec_inter_active>;
 		pinctrl-1 = <&typec_inter_sleep>;
+
+		typec_port_support;
 	};
 
 	rt1711h@4e {
@@ -1007,6 +1009,7 @@
 		qcom,use_external_cclogic;
 
 		qcom,sw_vfloat_over_protect_enable;
+		oplus,aging_ffc_version = <1>;
 
 		qcom,normal_vterm_hw_inc = <18>;
 		qcom,non_normal_vterm_hw_inc = <18>;

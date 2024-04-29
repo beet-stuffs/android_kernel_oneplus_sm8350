@@ -1045,11 +1045,11 @@
 			<&gcc GCC_CAMSS_OPE_AHB_CLK>,
 			<&gcc GCC_CAMSS_OPE_CLK_SRC>,
 			<&gcc GCC_CAMSS_OPE_CLK>;
-		clock-rates =
-			<171428571 0 200000000 0>,
-			<171428571 0 266600000 0>,
-			<240000000 0 480000000 0>,
-			<240000000 0 580000000 0>;
+        clock-rates =
+            <171428571 0 580000000 0>,
+            <171428571 0 580000000 0>,
+            <240000000 0 580000000 0>,
+            <240000000 0 580000000 0>;
 		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		src-clock-name = "ope_clk_src";
 		clock-control-debugfs = "true";

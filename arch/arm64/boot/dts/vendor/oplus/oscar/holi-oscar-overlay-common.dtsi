@@ -11,7 +11,7 @@
 	//kernel boot log: 0x9FE00000~ 0x9FFF6FFF, xbl-uefi log: 0x9FFF7000 ~ 0x9FFFFFFF
 	kboot_uboot_logmem: kboot_uboot_logmem@0x9FE00000 {
 		reg = <0x0 0x9FE00000 0x0 0x200000>;
-		compatible = "oplus,xbl_uefi_kbootlog";
+		compatible = "oppo,xbl_uefi_kbootlog";
 		xbluefi-offset = <0x1F7000>;
 		no-map;
 	};
@@ -129,13 +129,13 @@
 		pinctrl-0 = <&gpio_id2_default>;
 		jiiov_0301 {
 			oplus,fp-id = <0>; /* fp id mapping table */
-			vendor-chip = <23>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.h */
+			vendor-chip = <23>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.h */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "JIIOV_0301";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
 	gf_3956 {
             oplus,fp-id = <1>; /* fp id mapping table */
-            vendor-chip = <27>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.n */
+            vendor-chip = <27>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
             eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
             chip-name = "G_3956";  /* /proc/fp_id, will be displayed in engineer menu  */
     	};
@@ -229,7 +229,7 @@
 
 &tlmm {
 	/* add pingrp for touchscreen */
-	pmx_ts_int_active_oplus {
+	pmx_ts_int_active_oppo {
 		ts_int_active: ts_int_active {
 			mux {
 				pins = "gpio22";
@@ -245,7 +245,7 @@
 		};
 	};
 
-	pmx_ts_int_suspend_oplus {
+	pmx_ts_int_suspend_oppo {
 		ts_int_suspend1: ts_int_suspend1 {
 			mux {
 				pins = "gpio22";
@@ -262,7 +262,7 @@
 		};
 	};
 
-	pmx_ts_reset_active_oplus {
+	pmx_ts_reset_active_oppo {
 		ctp_ts_reset_poweron: ts_reset_active {
 			mux {
 				pins = "gpio21";
@@ -278,7 +278,7 @@
 		};
 	};
 
-	pmx_ts_reset_suspend_oplus {
+	pmx_ts_reset_suspend_oppo {
 		ctp_ts_reset_poweroff: ts_reset_suspend1 {
 			mux {
 				pins = "gpio21";
