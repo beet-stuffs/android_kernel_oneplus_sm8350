@@ -1,6 +1,7 @@
 ifeq ($(CONFIG_OPLUS_FINGERPRINT_QCOM),y)
 ccflags-y += -DQCOM_PLATFORM
-obj-y  += gf_spi.o gf_platform.o gf_netlink.o
+obj-$(CONFIG_OPLUS_FINGERPRINT_GOODIX) += gf_qcom.o
+gf_qcom-y := gf_spi.o gf_platform.o gf_netlink.o
 
 else ifeq ($(CONFIG_OPLUS_FINGERPRINT_MTK),y)
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
@@ -17,6 +18,6 @@ endif
 
 ccflags-y += -DMTK_PLATFORM
 
-obj-y  += gf_tee.o
+obj-$(CONFIG_OPLUS_FINGERPRINT_GOODIX)  += gf_tee.o
 gf_tee-y := gf_spi_tee.o gf_platform_mtk.o gf_netlink.o
 endif

@@ -4,11 +4,12 @@ menuconfig OPLUS_FINGERPRINT
 	help
 	  Say Y here to enable OPLUS fingerprint support
 
-config OPLUS_FINGERPRINT_GKI_DISABLE
-       default n
-       tristate "Fingerprint enable gki"
-
 if OPLUS_FINGERPRINT
+### fingerprint common config
+config OPLUS_FINGERPRINT_COMMON
+       default n
+       tristate "Fingerprint common"
+
 ### platform config
 config OPLUS_FINGERPRINT_QCOM
        default n

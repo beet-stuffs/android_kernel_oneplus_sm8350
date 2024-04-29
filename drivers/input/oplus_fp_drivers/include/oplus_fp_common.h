@@ -50,23 +50,10 @@ typedef enum {
     FP_EGIS_OPTICAL_ET713 = 15,
     FP_GOODIX_3626 = 16,
     FP_FPC_1541 = 17,
-    FP_EGIS_520 = 18,
-    FP_FPC_1542 = 19,
-    FP_FPC_1540 = 20,
-    FP_SILEAD_6150 = 21,
-    FP_SILEAD_6157 = 22,
+    FP_SILEAD_6159 = 19,
     FP_JIIOV_0302 = 23,
-    FP_CHIPONE_C7332 = 24,
-    FP_GOODIX_3688 = 25,
-    FP_GOODIX_3636 = 26,
+    FP_JIIOV_0301 = 24,
     FP_GOODIX_3956 = 27,
-    FP_FPC_1521 = 28,
-    FP_SILEAD_6159 = 29,
-    FP_FPS_980 = 30,
-    FP_JIIOV_0101 = 31,
-    FP_JIIOV_0301 = 32,
-    FP_FT_9396 = 33,
-    FP_GOODIX_3976 = 34,
     FP_UNKNOWN,
 } fp_vendor_t;
 
@@ -119,9 +106,9 @@ typedef struct {
     unsigned poweron_level;
 } fp_power_info_t;
 
-fp_vendor_t get_fpsensor_type(void);
+extern fp_vendor_t get_fpsensor_type(void);
 
 typedef int (*opticalfp_handler)(struct fp_underscreen_info *tp_info);
-void opticalfp_irq_handler_register(opticalfp_handler handler);
+extern void opticalfp_irq_handler_register(opticalfp_handler handler);
 
 #endif  /*_OPLUS_FP_COMMON_H_*/
