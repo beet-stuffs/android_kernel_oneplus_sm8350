@@ -1710,7 +1710,10 @@ static inline int typec_attached_snk_cc_detach(struct tcpc_device *tcpc)
 			tcpc_enable_timer(tcpc, TYPEC_TIMER_CCDEBOUNCE);
 		else
 			tcpc_enable_timer(tcpc, TYPEC_TIMER_PDDEBOUNCE);
-	}
+	} else {
+		TYPEC_INFO2("Detach_CC (TYPEC)\n");
+		tcpc_enable_timer(tcpc, TYPEC_TIMER_CCDEBOUNCE);
+ 	}
 #endif	/* CONFIG_USB_POWER_DELIVERY */
 	return 0;
 }
