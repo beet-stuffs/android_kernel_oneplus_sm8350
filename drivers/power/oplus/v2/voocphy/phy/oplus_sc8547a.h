@@ -452,41 +452,4 @@ const char *adapter_error_info[16] = {
 	"invalid msg!",
 };
 
-struct oplus_sc8574a_ufcs {
-	struct device *dev;
-	struct i2c_client *client;
-	struct regmap *regmap;
-
-	struct mutex chip_lock;
-	atomic_t suspended;
-	atomic_t i2c_err_count;
-	struct kthread_worker *wq;
-	struct kthread_work rcv_work;
-	struct work_struct reply_work;
-	struct delayed_work ufcs_service_work;
-	struct completion rcv_cmp;
-	struct wakeup_source *chip_ws;
-
-	enum UFCS_MACHINE_STATE state;
-	struct comm_msg dev_msg;
-	struct comm_msg rcv_msg;
-	struct oplus_ufcs_src_cap src_cap;
-	struct sc8574a_error_flag flag;
-	struct oplus_ufcs_error error;
-	struct oplus_ufcs_sink_info info;
-	u8 dev_buffer[MAX_TX_BUFFER_SIZE];
-	u8 rcv_buffer[MAX_RCV_BUFFER_SIZE];
-	int msg_send_id;
-	int msg_recv_id;
-
-	int get_flag_failed;
-	int handshake_success;
-	int ack_received;
-	int msg_received;
-	int soft_reset;
-	int uct_mode;
-	bool oplus_id;
-	bool ufcs_enable;
-	bool abnormal_id;
-};
 #endif /*_OPLUS_SC8547A_H_*/

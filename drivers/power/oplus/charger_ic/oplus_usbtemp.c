@@ -236,6 +236,7 @@ int oplus_usbtemp_dischg_action(struct oplus_chg_chip *chip)
 	if (1) {
 #endif
 		chg_err(" CONFIG_HIGH_TEMP_VERSION enable here,do not set vbus down \n");
+		chip->dischg_flag = false;
 		if (chip->usbtemp_dischg_by_pmic) {
 			/* add for MTK 6373 pmic usbtemp hardware scheme */
 			oplus_chg_set_dischg_enable(false);
@@ -1186,12 +1187,6 @@ bool oplus_usbtemp_change_curr_range(struct oplus_chg_chip *chip, int retry_cnt,
 			return true;
 		}
 	}
-
-	if (curr_range_change == false || chip->usbtemp_curr_status != OPLUS_USBTEMP_LOW_CURR) {
-		last_curr_change_usb_temp_r = chip->usb_temp_r;
-		last_curr_change_usb_temp_l = chip->usb_temp_l;
-	}
-
 	return false;
 }
 
