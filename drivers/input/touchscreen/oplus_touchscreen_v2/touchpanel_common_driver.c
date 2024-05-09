@@ -90,9 +90,6 @@ extern  int reconfig_power_control(struct touchpanel_data *ts);
 #if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
 static int tp_gesture_enable_flag(unsigned int tp_index);
 extern int (*tp_gesture_enable_notifier)(unsigned int tp_index);
-extern int (*tp_cs_gpio_notifier)(bool enable, unsigned int tp_index);
-extern int (*tp_reset_gpio_notifier)(bool enable, unsigned int tp_index);
-extern void (*tp_ftm_extra_notifier)(unsigned int tp_index);
 #endif
 
 extern int get_boot_mode(void);
@@ -293,6 +290,7 @@ static void touch_call_notifier_fp(struct fp_underscreen_info *fp_info)
 #else
 	opticalfp_irq_handler(fp_info);
 #endif
+	opticalfp_irq_handler_uff(fp_info);
 }
 
 static inline void tp_touch_down(struct touchpanel_data *ts, struct point_info points, int touch_report_num, int id)
@@ -2897,14 +2895,33 @@ static int ts_check_panel_dt(struct device *dev, struct touchpanel_data *ts)
 	struct device_node *node = NULL;
 	struct drm_panel *panel = NULL;
 	struct device_node *np = NULL;
-	np = dev->of_node;
+	char disp_node[32] = {0};
 
-	count = of_count_phandle_with_args(np, "panel", NULL);
-	if (count <= 0)
+	np = of_find_node_by_name(NULL, "oplus,dsi-display-dev");
+	if (!np) {
+		TP_INFO(ts->tp_index, "%s: [oplus,dsi-display-dev] is missing, try to find [panel] node \n", __func__);
+		np = dev->of_node;
+		strncpy(disp_node, "panel", sizeof("panel"));
+	} else {
+		TP_INFO(ts->tp_index, "%s: [oplus,dsi-display-dev] node found \n", __func__);
+		if (ts->tp_index == 0) {
+			strncpy(disp_node, "oplus,dsi-panel-primary", sizeof("oplus,dsi-panel-primary"));
+		} else if (ts->tp_index == 1) {
+			strncpy(disp_node, "oplus,dsi-panel-secondary", sizeof("oplus,dsi-panel-secondary"));
+		} else {
+			TP_INFO(ts->tp_index, "%s: This branch will never be called now \n", __func__);
+		}
+		TP_INFO(ts->tp_index, "%s: disp_node = %s \n", __func__, disp_node);
+	}
+
+	count = of_count_phandle_with_args(np, disp_node, NULL);
+	if (count <= 0) {
+		TP_INFO(ts->tp_index, "%s: can not find [%s] node in dts \n", __func__, disp_node);
 		return 0;
+	}
 
 	for (i = 0; i < count; i++) {
-		node = of_parse_phandle(np, "panel", i);
+		node = of_parse_phandle(np, disp_node, i);
 		panel = of_drm_find_panel(node);
 
 		TP_INFO(ts->tp_index, "%s: panel[%d] IS_ERR =%d \n", __func__, i, IS_ERR(panel));
@@ -3041,9 +3058,6 @@ int register_common_touch_device(struct touchpanel_data *pdata)
 
 	/*step10 : FTM process*/
 	ts->boot_mode = get_boot_mode();
-	tp_cs_gpio_notifier = tp_control_cs_gpio;
-	tp_reset_gpio_notifier = tp_control_reset_gpio;
-	tp_ftm_extra_notifier = tp_ftm_extra;
 
 	if (is_ftm_boot_mode(ts)) {
 		ts->ts_ops->ftm_process(ts->chip_data);
@@ -4159,7 +4173,7 @@ static void lcd_tp_load_fw(unsigned int tp_index)
  * tp_gesture_enable_flag -   expose gesture control status for other module.
  * Return gesture_enable status.
  */
- #if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
+#if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
 static int tp_gesture_enable_flag(unsigned int tp_index)
 {
 	struct touchpanel_data *ts = NULL;
@@ -4178,6 +4192,7 @@ static int tp_gesture_enable_flag(unsigned int tp_index)
 	return (ts->gesture_enable > 0) ? LCD_POWER_ON : LCD_POWER_OFF;
 }
 #endif
+
 
 /*
 *Interface for lcd to control reset pin
