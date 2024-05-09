@@ -16,6 +16,11 @@
 		pinctrl-0 = <&vib_on_high>;
 		pinctrl-1 = <&vib_off_low >;
 	};
+
+	oplus_battery_log: oplus,battery_log {
+		compatible = "oplus,battery_log";
+		oplus,battery_log_support;
+	};
 };
 
 &tlmm {
@@ -82,8 +87,10 @@
 		pinctrl-names = "typec_inter_active", "typec_inter_sleep";
 		pinctrl-0 = <&typec_inter_active>;
 		pinctrl-1 = <&typec_inter_sleep>;
+
+		typec_port_support;
 	};
-	
+
 	rt1711h@4e {
 		compatible = "richtek,rt1711h";
 		reg = <0x4e>;
@@ -966,6 +973,7 @@
 		qcom,use_external_cclogic;
 
 		qcom,sw_vfloat_over_protect_enable;
+		oplus,aging_ffc_version = <1>;
 
 		qcom,normal_vterm_hw_inc = <18>;
 		qcom,non_normal_vterm_hw_inc = <18>;
