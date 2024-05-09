@@ -186,9 +186,11 @@ static const rt_register_map_t rt1711_chip_regmap[] = {
 #define RT1711_CHIP_REGMAP_SIZE ARRAY_SIZE(rt1711_chip_regmap)
 
 #endif /* CONFIG_RT_REGMAP */
-
-void __attribute__((weak)) cpu_idle_poll_ctrl(bool enable) {}
+#ifdef OPLUS_FEATURE_CHG_BASIC
 static int rt1711_set_vconn(struct tcpc_device *tcpc, int enable);
+static inline bool rt1711h_check_sc6607(struct tcpc_device *tcpc);
+#endif
+void __attribute__((weak)) cpu_idle_poll_ctrl(bool enable) {}
 
 static int rt1711_read_device(void *client, u32 reg, int len, void *dst)
 {
@@ -1075,8 +1077,12 @@ static int rt1711_set_cc(struct tcpc_device *tcpc, int pull)
 	if (chip->chip_id == SC2150A_DID)
 		old_data = rt1711_i2c_read8(tcpc, TCPC_V10_REG_ROLE_CTRL);
 	if (pull == TYPEC_CC_DRP) {
-		data = TCPC_V10_REG_ROLE_CTRL_RES_SET(
-				1, rp_lvl, TYPEC_CC_RD, TYPEC_CC_RD);
+		if (rt1711h_check_sc6607(tcpc))
+			data = TCPC_V10_REG_ROLE_CTRL_RES_SET(
+					1, rp_lvl, TYPEC_CC_RP, TYPEC_CC_RP);
+		else
+			data = TCPC_V10_REG_ROLE_CTRL_RES_SET(
+					1, rp_lvl, TYPEC_CC_RD, TYPEC_CC_RD);
 		if (chip->chip_id != SC2150A_DID || old_data != data) {
 			ret = rt1711_i2c_write8(tcpc, TCPC_V10_REG_ROLE_CTRL,
 						data);
@@ -1155,6 +1161,9 @@ static int rt1711_set_vconn(struct tcpc_device *tcpc, int enable)
 	if (data < 0)
 		return data;
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	pr_info("%s, 0x%x=0x%x, enable=%d\n", __func__, TCPC_V10_REG_POWER_CTRL, data, enable);
+#endif
 	data &= ~TCPC_V10_REG_POWER_CTRL_VCONN;
 	data |= enable ? TCPC_V10_REG_POWER_CTRL_VCONN : 0;
 
@@ -1652,6 +1661,57 @@ static int rt1711_tcpcdev_init(struct rt1711_chip *chip, struct device *dev)
 #define RICHTEK_1711_DID	0x2173
 #define SC2150A_VID		0x311c
 #define SC2150A_PID		0x2150
+#define SC6607_VID		0x311c
+#define SC6607_PID		0x6600
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+static inline bool rt1711h_check_sc6607(struct tcpc_device *tcpc)
+{
+	u16 vid, pid, did;
+	int ret;
+	struct rt1711_chip *chip = tcpc_get_dev_data(tcpc);
+	static bool check_done = false;
+	static bool is_sc6607 = false;
+
+	if (!chip)
+		return false;
+
+	if (check_done)
+		return is_sc6607;
+
+	check_done = true;
+	ret = rt1711_read_device(chip->client, TCPC_V10_REG_VID, 2, &vid);
+	if (ret < 0) {
+		dev_err(&chip->client->dev, "read chip id fail(%d)\n", ret);
+		return is_sc6607;
+	}
+
+	pr_info("%s, vid=0x%x\n", __func__, vid);
+	if (vid != SC6607_VID)
+		return is_sc6607;
+
+	ret = rt1711_read_device(chip->client, TCPC_V10_REG_PID, 2, &pid);
+	if (ret < 0) {
+		dev_err(&chip->client->dev, "read product id fail(%d)\n", ret);
+		return is_sc6607;
+	}
+	pr_info("%s, pid=0x%x\n", __func__, pid);
+	if (pid != SC6607_PID)
+		return is_sc6607;
+
+	ret = rt1711_read_device(chip->client, TCPC_V10_REG_DID, 2, &did);
+	if (ret < 0) {
+		dev_err(&chip->client->dev, "read device id fail(%d)\n", ret);
+		return is_sc6607;
+	}
+
+	pr_info("%s, did=0x%x\n", __func__, did);
+	if (did == SC6607_DID)
+		is_sc6607 = true;
+
+	return is_sc6607;
+}
+#endif
 
 static inline int rt1711h_check_revision(struct i2c_client *client)
 {
@@ -1665,7 +1725,8 @@ static inline int rt1711h_check_revision(struct i2c_client *client)
 		return -EIO;
 	}
 
-	if ((vid != RICHTEK_1711_VID) && (vid != HUSB311_VID) && (vid != SC2150A_VID)) {
+	if ((vid != RICHTEK_1711_VID) && (vid != HUSB311_VID) &&
+	   (vid != SC2150A_VID) && (vid != SC6607_VID)) {
 		pr_info("%s failed, VID=0x%04x\n", __func__, vid);
 		return -ENODEV;
 	}
@@ -1676,7 +1737,8 @@ static inline int rt1711h_check_revision(struct i2c_client *client)
 		return -EIO;
 	}
 
-	if ((pid != RICHTEK_1711_PID) && (pid != HUSB311_PID) && (pid != SC2150A_PID)) {
+	if ((pid != RICHTEK_1711_PID) && (pid != HUSB311_PID) &&
+	   (pid != SC2150A_PID) && (pid != SC6607_PID)) {
 		pr_info("%s failed, PID=0x%04x\n", __func__, pid);
 		return -ENODEV;
 	}
@@ -1699,6 +1761,9 @@ static inline int rt1711h_check_revision(struct i2c_client *client)
 		dev_err(&client->dev, "read device ID fail(%d)\n", ret);
 		return -EIO;
 	}
+	if (vid == SC6607_VID && pid == SC6607_PID && did == SC6607_DID)
+		did = SC2150A_DID;
+	pr_err(" (%s) vid = 0x%x pid = 0x%x did = 0x%x\n", __func__, vid, pid, did);
 
 	return did;
 }
@@ -1933,6 +1998,7 @@ static const struct i2c_device_id rt1711_id_table[] = {
 	{"rt1715", 0},
 	{"rt1716", 0},
 	{"sc2150a", 0},
+	{"sc6607", 0},
 	{},
 };
 MODULE_DEVICE_TABLE(i2c, rt1711_id_table);
@@ -1942,6 +2008,7 @@ static const struct of_device_id rt_match_table[] = {
 	{.compatible = "richtek,rt1715",},
 	{.compatible = "richtek,rt1716",},
 	{.compatible = "southchip,sc2150a",},
+	{.compatible = "sc,sc6607",},
 	{},
 };
 
