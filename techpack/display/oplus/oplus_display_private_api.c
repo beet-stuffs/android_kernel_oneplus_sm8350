@@ -62,6 +62,8 @@ int oplus_dimlayer_bl_enable_v3_real;
 int oplus_dimlayer_bl_enable_v2_real = 0;
 bool oplus_skip_datadimming_sync = false;
 
+uint64_t serial_number_fir = 0x0;
+
 extern int oplus_debug_max_brightness;
 int oplus_seed_backlight = 0;
 
@@ -392,7 +394,7 @@ int dsi_display_read_panel_reg_switch_page(struct dsi_display *display, u8 cmd, 
 
 	panel = display->panel;
 
-	mutex_lock(&panel->panel_lock);
+	mutex_lock(&display->display_lock);
 
 	rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_PANEL_INFO_SWITCH_PAGE);
 	if (rc) {
@@ -449,7 +451,7 @@ int dsi_display_read_panel_reg_switch_page(struct dsi_display *display, u8 cmd, 
 	}
 
 done:
-	mutex_unlock(&panel->panel_lock);
+	mutex_unlock(&display->display_lock);
 	pr_err("%s, return: %d\n", __func__, rc);
 	return rc;
 }
@@ -635,6 +637,7 @@ bool is_nonsupport_ramless(const char *panel_name) {
 
 	if ((!strcmp(panel_name, "ILI7838A")) ||
 		(!strcmp(panel_name, "NT37705")) ||
+		(!strcmp(panel_name, "VISIONOXILI7838A")) ||
 		(!strcmp(panel_name, "AMS643YE01")) ||
 		(!strcmp(panel_name, "AMS643AG02")) ||
 		(!strcmp(panel_name, "S6E3HC3")) ||
@@ -739,17 +742,34 @@ static ssize_t oplus_display_get_panel_serial_number(struct kobject *obj,
         g_oplus_need_lp_mode = true;
 
 	/*
+	 * To fix bug id 5552142, we do not read serial number frequently.
+	 * First read, then return the saved value.
+	 */
+	if (serial_number_fir != 0) {
+		ret = scnprintf(buf, PAGE_SIZE, "Get panel0 serial number: %llx\n",
+						serial_number_fir);
+		pr_info("%s read serial_number_fir 0x%x\n", __func__, serial_number_fir);
+		return ret;
+	}
+
+	/*
 	 * for some unknown reason, the panel_serial_info may read dummy,
 	 * retry when found panel_serial_info is abnormal.
 	 */
 	for (i = 0; i < 10; i++) {
+		if (display->panel->power_mode != SDE_MODE_DPMS_ON) {
+			printk(KERN_ERR"%s display panel in off status\n", __func__);
+			return ret;
+		}
+		if (!display->panel->panel_initialized) {
+			printk(KERN_ERR"%s panel initialized = false\n", __func__);
+			return ret;
+		}
 		if (display->panel->oplus_ser.is_switch_page) {
 			len = sizeof(display->panel->oplus_ser.serial_number_multi_regs) - 1;
 			for (read_index = 0; read_index < len; read_index++) {
-				mutex_lock(&display->display_lock);
 				ret = dsi_display_read_panel_reg_switch_page(display, display->panel->oplus_ser.serial_number_multi_regs[read_index],
 					ret_val, 1);
-				mutex_unlock(&display->display_lock);
 				read[read_index] = ret_val[0];
 				if (ret < 0) {
 					ret = scnprintf(buf, PAGE_SIZE,
@@ -832,6 +852,8 @@ static ssize_t oplus_display_get_panel_serial_number(struct kobject *obj,
 
 		ret = scnprintf(buf, PAGE_SIZE, "Get panel serial number: %llx\n",
 				serial_number);
+		/*Save serial_number value.*/
+		serial_number_fir = serial_number;
 		break;
 	}
 
@@ -3559,7 +3581,7 @@ static ssize_t oplus_display_set_panel_pwr(struct kobject *obj,
 	pr_err("debug for %s, buf = [%s], id = %d value = %d, count = %d\n",
 	       __func__, buf, panel_vol_id, panel_vol_value, count);
 
-	if (panel_vol_id < 0 || panel_vol_id > PANEL_VOLTAGE_ID_MAX) {
+	if (panel_vol_id < 0 || panel_vol_id >= PANEL_VOLTAGE_ID_MAX) {
 		return -EINVAL;
 	}
 

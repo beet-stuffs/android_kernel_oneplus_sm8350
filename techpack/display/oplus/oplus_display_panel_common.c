@@ -40,6 +40,7 @@ extern int lcd_closebl_flag;
 extern int spr_mode;
 extern int dynamic_osc_clock;
 int mca_mode = 1;
+uint64_t serial_number0 = 0x0;
 extern int oplus_dimlayer_hbm;
 extern int oplus_dimlayer_bl;
 extern int shutdown_flag;
@@ -359,12 +360,29 @@ int oplus_display_panel_get_serial_number(void *buf) {
 		printk(KERN_ERR"%s display panel in off status\n", __func__);
 		return ret;
 	}
-
+	/*
+	* To fix bug id 5552142, we do not read serial number frequently.
+	* First read, then return the saved value.
+	*/
+	if (serial_number0 != 0) {
+		ret = scnprintf(panel_rnum->serial_number, PAGE_SIZE, "Get panel serial number: %llx\n",
+						serial_number0);
+		pr_info("%s read serial_number0 0x%x\n", __func__, serial_number0);
+		return ret;
+	}
 	/*
 	 * for some unknown reason, the panel_serial_info may read dummy,
 	 * retry when found panel_serial_info is abnormal.
 	 */
 	for (i = 0;i < 10; i++) {
+		if (display->panel->power_mode != SDE_MODE_DPMS_ON) {
+			printk(KERN_ERR"%s display panel in off status\n", __func__);
+			return ret;
+		}
+		if (!display->panel->panel_initialized) {
+			printk(KERN_ERR"%s	panel initialized = false\n", __func__);
+			return ret;
+		}
 		if(!strcmp(display->panel->oplus_priv.vendor_name, "S6E3XA1") ||
 				!strcmp(display->panel->oplus_priv.vendor_name, "AMS662ZS01") ||
 				!strcmp(display->panel->oplus_priv.vendor_name, "AMS643YE01") ||
@@ -399,10 +417,8 @@ int oplus_display_panel_get_serial_number(void *buf) {
 		} else if (display->panel->oplus_ser.is_switch_page) {
 			len = sizeof(display->panel->oplus_ser.serial_number_multi_regs) - 1;
 			for (read_index = 0; read_index < len; read_index++) {
-				mutex_lock(&display->display_lock);
 				ret = dsi_display_read_panel_reg_switch_page(display, display->panel->oplus_ser.serial_number_multi_regs[read_index],
 					ret_val, 1);
-				mutex_unlock(&display->display_lock);
 				read[read_index] = ret_val[0];
 				printk("read =%x\n", read[read_index]);
 				if (ret < 0) {
@@ -507,6 +523,8 @@ int oplus_display_panel_get_serial_number(void *buf) {
 		}
 
 		ret = scnprintf(panel_rnum->serial_number, PAGE_SIZE, "Get panel serial number: %llx\n",serial_number);
+		/*Save serial_number value.*/
+		serial_number0 = serial_number;
 		break;
 	}
 
