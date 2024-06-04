@@ -200,6 +200,39 @@ struct subsys_device {
 	struct list_head list;
 };
 
+#ifdef OPLUS_FEATURE_ADSP_RECOVERY
+static bool oplus_adsp_ssr = false;
+
+void oplus_adsp_set_ssr_state(bool state)
+{
+        if (oplus_adsp_ssr == state)
+                return;
+        oplus_adsp_ssr = state;
+        pr_err("set oplus_adsp_ssr=%d\n", oplus_adsp_ssr);
+}
+EXPORT_SYMBOL(oplus_adsp_set_ssr_state);
+
+bool oplus_adsp_get_ssr_state(void)
+{
+        pr_err("get oplus_adsp_ssr=%d\n", oplus_adsp_ssr);
+        return oplus_adsp_ssr;
+}
+EXPORT_SYMBOL(oplus_adsp_get_ssr_state);
+
+int oplus_adsp_get_restart_level(const char *name)
+{
+        struct subsys_device *dev = find_subsys_device(name);
+
+        if (!dev) {
+                pr_err("can not find subsys dev for '%s'\n", name?name:"unknown");
+                return -1;
+        }
+
+        return dev->restart_level;
+}
+EXPORT_SYMBOL(oplus_adsp_get_restart_level);
+#endif /* OPLUS_FEATURE_ADSP_RECOVERY */
+
 static struct subsys_device *to_subsys(struct device *d)
 {
 	return container_of(d, struct subsys_device, dev);
@@ -1082,6 +1115,19 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	}
 
 	name = dev->desc->name;
+
+        #ifdef OPLUS_FEATURE_ADSP_RECOVERY
+        if (name && !strcmp(name, "adsp")) {
+                pr_err("adsp subsystem restart.\n");
+                if (oplus_adsp_get_ssr_state()) {
+                        pr_err("adsp restarting, Ignoring request\n");
+                        return 0;
+                } else {
+                        pr_err("set adsp restart state\n");
+                        oplus_adsp_set_ssr_state(true);
+                }
+        }
+        #endif /* OPLUS_FEATURE_ADSP_RECOVERY */
 
 	subsys_send_early_notifications(dev->early_notify);
 
