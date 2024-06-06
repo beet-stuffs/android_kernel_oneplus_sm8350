@@ -1098,10 +1098,6 @@ extern int request_firmware_select(const struct firmware **firmware_p, const cha
 bool is_oem_unlocked(void);
 int  get_oem_verified_boot_state(void);
 
- __attribute__((weak)) int opticalfp_irq_handler_uff(struct fp_underscreen_info *fp_tpinfo)
-{
-	return 0;
-}
 #ifndef CONFIG_TOUCHPANEL_NOTIFY
 int opticalfp_irq_handler(struct fp_underscreen_info *fp_tpinfo);
 #endif
