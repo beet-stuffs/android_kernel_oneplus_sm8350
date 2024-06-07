@@ -50,6 +50,10 @@
 #include "codecs/sia81xx/sia81xx_aux_dev_if.h"
 //#endif /* OPLUS_ARCH_EXTENDS */
 
+#ifdef CONFIG_SND_SOC_OPLUS_PA_MANAGER
+#include "./codecs/common/oplus_speaker_manager.h"
+#endif
+
 #define DRV_NAME "holi-asoc-snd"
 #define __CHIPSET__ "HOLI "
 #define MSM_DAILINK_NAME(name) (__CHIPSET__#name)
@@ -6368,6 +6372,23 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_new_controls(dapm, msm_int_dapm_widgets,
 				ARRAY_SIZE(msm_int_dapm_widgets));
+
+#ifdef CONFIG_SND_SOC_OPLUS_PA_MANAGER
+        ret = oplus_add_pa_manager_snd_controls(component);
+        if (ret < 0) {
+                pr_err("%s: add oplus pa mangerr snd controls failed: %d\n",
+                        __func__, ret);
+                return ret;
+        }
+
+        ret = oplus_add_analog_pa_manager_dapm(dapm);
+        if (ret < 0) {
+                pr_err("%s: add oplus pa manager dapm failed: %d\n",
+                        __func__, ret);
+
+                return ret;
+        }
+#endif /* CONFIG_SND_SOC_OPLUS_PA_MANAGER */
 
 	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic0");
 	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic1");

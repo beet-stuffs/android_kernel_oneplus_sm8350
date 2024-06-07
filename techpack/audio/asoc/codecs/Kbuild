@@ -280,6 +280,9 @@ endif
 ifdef CONFIG_SND_SOC_SIA81XX
 	obj-y	+= sia81xx/
 endif
+ifdef CONFIG_SND_SOC_OPLUS_PA_MANAGER
+        obj-y   += common/
+endif
 #endif
 	obj-y	+= rouleur/
 endif
