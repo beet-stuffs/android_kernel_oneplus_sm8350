@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -856,7 +856,6 @@ static int cam_hw_cdm_arb_submit_bl(struct cam_hw_info *cdm_hw,
 			"CDM hw bl write failed tag=%d",
 			core->bl_fifo[fifo_idx].bl_tag -
 			1);
-			cam_mem_put_cpu_buf(cdm_cmd->cmd[i].bl_addr.mem_handle);
 			list_del_init(&node->entry);
 			kfree(node);
 			return -EIO;
@@ -868,12 +867,11 @@ static int cam_hw_cdm_arb_submit_bl(struct cam_hw_info *cdm_hw,
 			"CDM hw commit failed tag=%d",
 			core->bl_fifo[fifo_idx].bl_tag -
 			1);
-			cam_mem_put_cpu_buf(cdm_cmd->cmd[i].bl_addr.mem_handle);
 			list_del_init(&node->entry);
 			kfree(node);
 			return -EIO;
 	}
-	cam_mem_put_cpu_buf(cdm_cmd->cmd[i].bl_addr.mem_handle);
+
 	return 0;
 }
 
@@ -1240,8 +1238,6 @@ static void cam_hw_cdm_work(struct work_struct *work)
 			payload = NULL;
 			return;
 		}
-
-		mutex_lock(&cdm_hw->hw_mutex);
 		mutex_lock(&core->bl_fifo[fifo_idx].fifo_lock);
 
 		if (atomic_read(&core->bl_fifo[fifo_idx].work_record))
@@ -1255,7 +1251,6 @@ static void cam_hw_cdm_work(struct work_struct *work)
 				core->arbitration);
 			mutex_unlock(&core->bl_fifo[fifo_idx]
 					.fifo_lock);
-			mutex_unlock(&cdm_hw->hw_mutex);
 			return;
 		}
 
@@ -1266,6 +1261,7 @@ static void cam_hw_cdm_work(struct work_struct *work)
 			list_for_each_entry_safe(node, tnode,
 				&core->bl_fifo[fifo_idx].bl_request_list,
 				entry) {
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 				if ((node->bl_tag <= payload->irq_data) ||
 					((node->bl_tag - payload->irq_data) >
 					CAM_CDM_BL_FIFO_BOUNDARY_CHECK)) {
@@ -1290,7 +1286,29 @@ static void cam_hw_cdm_work(struct work_struct *work)
 					kfree(node);
 					node = NULL;
 				}
-			}
+#else
+                               if (node->request_type ==
+                                       CAM_HW_CDM_BL_CB_CLIENT) {
+                                       cam_cdm_notify_clients(cdm_hw,
+                                       CAM_CDM_CB_STATUS_BL_SUCCESS,
+                                       (void *)node);
+                                } else if (node->request_type ==
+                                        CAM_HW_CDM_BL_CB_INTERNAL) {
+                                        CAM_ERR(CAM_CDM,
+                                                "Invalid node=%pK %d",
+                                                node,
+                                                node->request_type);
+                                }
+                                list_del_init(&node->entry);
+                                if (node->bl_tag == payload->irq_data) {
+                                        kfree(node);
+                                        node = NULL;
+                                        break;
+                                }
+                                kfree(node);
+                                node = NULL;
+#endif
+                       }
 		} else {
 			CAM_INFO(CAM_CDM,
 				"Skip GenIRQ, tag 0x%x fifo %d",
@@ -1298,7 +1316,6 @@ static void cam_hw_cdm_work(struct work_struct *work)
 		}
 		mutex_unlock(&core->bl_fifo[payload->fifo_idx]
 			.fifo_lock);
-		mutex_unlock(&cdm_hw->hw_mutex);
 	}
 
 	if (payload->irq_status &
@@ -1415,9 +1432,9 @@ handle_cdm_pf:
 				cdm_hw->soc_info.index);
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++)
 			mutex_unlock(&core->bl_fifo[i].fifo_lock);
+		mutex_unlock(&cdm_hw->hw_mutex);
 		cam_cdm_notify_clients(cdm_hw, CAM_CDM_CB_STATUS_PAGEFAULT,
 			(void *)pf_info->iova);
-		mutex_unlock(&cdm_hw->hw_mutex);
 		clear_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 	} else {
 		CAM_ERR(CAM_CDM, "Invalid token");
@@ -2233,9 +2250,15 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 		len = strlcpy(work_q_name, cdm_core->name,
 				sizeof(cdm_core->name));
 		snprintf(work_q_name + len, sizeof(work_q_name) - len, "%d", i);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 		cdm_core->bl_fifo[i].work_queue = alloc_workqueue(work_q_name,
-				WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_SYSFS | WQ_HIGHPRI,
+				WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_SYSFS,
 				CAM_CDM_INFLIGHT_WORKS);
+#else
+                cdm_core->bl_fifo[i].work_queue = alloc_workqueue(work_q_name,
+                                WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_SYSFS | WQ_HIGHPRI,
+                                CAM_CDM_INFLIGHT_WORKS);
+#endif
 		if (!cdm_core->bl_fifo[i].work_queue) {
 			CAM_ERR(CAM_CDM,
 				"Workqueue allocation failed for FIFO %d, cdm %s",

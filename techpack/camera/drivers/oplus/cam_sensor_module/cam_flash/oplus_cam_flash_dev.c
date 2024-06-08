@@ -556,7 +556,7 @@ static ssize_t flash_on_off(struct cam_flash_ctrl *flash_ctrl)
 static ssize_t flash_proc_write(struct file *filp, const char __user *buff,
 						size_t len, loff_t *data)
 {
-	char buf[8] = {0};
+	char buf[9] = {0};
 	int rc = 0;
 	if (len > 8)
 		len = 8;
@@ -564,6 +564,7 @@ static ssize_t flash_proc_write(struct file *filp, const char __user *buff,
 		pr_err("proc write error.\n");
 		return -EFAULT;
 	}
+    buf[len] = '\0';
 	flash_mode = simple_strtoul(buf, NULL, 10);
 	if (vendor_flash_ctrl->io_master_info.master_type == I2C_MASTER ||
         vendor_flash_ctrl->io_master_info.master_type == CCI_MASTER) {

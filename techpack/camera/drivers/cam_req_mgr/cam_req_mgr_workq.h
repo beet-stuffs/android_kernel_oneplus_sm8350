@@ -92,6 +92,7 @@ struct cam_req_mgr_core_workq {
 	spinlock_t                 lock_bh;
 	uint32_t                   in_irq;
 	ktime_t                    workq_scheduled_ts;
+	char                       workq_name[128];
 
 	/* tasks */
 	struct {
@@ -104,6 +105,8 @@ struct cam_req_mgr_core_workq {
 		struct crm_workq_task *pool;
 		uint32_t               num_task;
 	} task;
+	struct task_struct   *thread;
+	struct mutex         rt_lock;
 };
 
 /**

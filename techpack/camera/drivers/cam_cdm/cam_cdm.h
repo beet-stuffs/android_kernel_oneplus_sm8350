@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _CAM_CDM_H_
@@ -24,9 +24,15 @@
 
 #define CAM_MAX_SW_CDM_VERSION_SUPPORTED  1
 #define CAM_SW_CDM_INDEX                  0
+
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define CAM_CDM_INFLIGHT_WORKS            5
+#else
 #define CAM_CDM_INFLIGHT_WORKS            1
+#endif
+
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#define CAM_CDM_HW_RESET_TIMEOUT          900
+#define CAM_CDM_HW_RESET_TIMEOUT          1500
 #else
 #define CAM_CDM_HW_RESET_TIMEOUT          300
 #endif
@@ -73,8 +79,11 @@
 #define CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT 0x40
 #define CAM_CDM_BL_FIFO_LENGTH_CFG_SHIFT 0x10
 #define CAM_CDM_BL_FIFO_FLUSH_SHIFT 0x3
+
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 #define CAM_CDM_BL_FIFO_BOUNDARY_CHECK \
 	(CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT / 2)
+#endif
 
 #define CAM_CDM_BL_FIFO_REQ_SIZE_MAX 0x00
 #define CAM_CDM_BL_FIFO_REQ_SIZE_MAX_DIV2 0x01

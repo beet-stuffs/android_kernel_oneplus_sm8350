@@ -178,9 +178,8 @@ struct cam_cmd_probe {
 	__u16    reserved;
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 	__u16     flash_id;
-	__u16     sensor_id_list[SENSOR_ID_LIST_MAX];
+	__u16	  sensor_id_list[SENSOR_ID_LIST_MAX];
 #endif /*OPLUS_FEATURE_CAMERA_COMMON*/
-
 } __attribute__((packed));
 
 /**

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2022, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/uaccess.h>
@@ -20,7 +19,6 @@
 #include <media/cam_defs.h>
 #include <media/cam_ope.h>
 #include <media/cam_cpas.h>
-#include <linux/math64.h>
 
 #include "cam_sync_api.h"
 #include "cam_packet_util.h"
@@ -42,6 +40,7 @@
 #include "cam_cdm_util.h"
 #include "cam_cdm.h"
 #include "ope_dev_intf.h"
+
 
 static struct cam_ope_hw_mgr *ope_hw_mgr;
 
@@ -428,29 +427,6 @@ end:
 	return;
 }
 
-static int cam_ope_mgr_put_cmd_buf(struct cam_packet *packet)
-{
-	int i = 0, rc = 0;
-	struct cam_cmd_buf_desc *cmd_desc = NULL;
-
-	cmd_desc = (struct cam_cmd_buf_desc *)
-		((uint32_t *) &packet->payload + packet->cmd_buf_offset/4);
-
-	for (i = 0; i < packet->num_cmd_buf; i++) {
-		rc = cam_packet_util_validate_cmd_desc(&cmd_desc[i]);
-		if (rc)
-			return rc;
-
-		if (cmd_desc[i].type != CAM_CMD_BUF_GENERIC ||
-			cmd_desc[i].meta_data == OPE_CMD_META_GENERIC_BLOB)
-			continue;
-
-		cam_mem_put_cpu_buf(cmd_desc[i].mem_handle);
-	}
-
-	return rc;
-}
-
 static int cam_ope_dump_indirect(struct ope_cmd_buf_info *cmd_buf_info,
 	struct cam_ope_hang_dump *dump)
 {
@@ -480,7 +456,6 @@ static int cam_ope_dump_indirect(struct ope_cmd_buf_info *cmd_buf_info,
 			print_ptr += sizeof(struct cdm_dmi_cmd) /
 				sizeof(uint32_t);
 	}
-	cam_mem_put_cpu_buf((int32_t) cmd_buf_info->mem_handle);
 	return rc;
 }
 
@@ -562,10 +537,6 @@ static int cam_ope_dump_frame_process(struct cam_packet *packet,
 	cmd_desc = (struct cam_cmd_buf_desc *)
 		((uint32_t *) &packet->payload + packet->cmd_buf_offset/4);
 	for (i = 0; i < packet->num_cmd_buf; i++) {
-		rc = cam_packet_util_validate_cmd_desc(&cmd_desc[i]);
-		if (rc)
-			return rc;
-
 		if (cmd_desc[i].type != CAM_CMD_BUF_GENERIC ||
 			cmd_desc[i].meta_data == OPE_CMD_META_GENERIC_BLOB)
 			continue;
@@ -587,7 +558,6 @@ static int cam_ope_dump_frame_process(struct cam_packet *packet,
 
 	cam_ope_mgr_dump_cmd_buf(cpu_addr, dump);
 	cam_ope_mgr_dump_frame_set(cpu_addr, dump);
-	cam_ope_mgr_put_cmd_buf(packet);
 	return rc;
 }
 
@@ -655,8 +625,8 @@ static bool cam_ope_check_req_delay(struct cam_ope_ctx *ctx_data,
 		ts.tv_nsec);
 
 	if (ts_ns - req_time <
-		((ctx_data->req_timer_timeout -
-			div_u64(ctx_data->req_timer_timeout, 10)) * 1000000)) {
+		((OPE_REQUEST_TIMEOUT -
+			OPE_REQUEST_TIMEOUT / 10) * 1000000)) {
 		CAM_INFO(CAM_OPE, "ctx: %d, ts_ns : %llu",
 		ctx_data->ctx_id, ts_ns);
 		cam_ope_req_timer_reset(ctx_data);
@@ -879,7 +849,7 @@ static int cam_ope_start_req_timer(struct cam_ope_ctx *ctx_data)
 	int rc = 0;
 
 	rc = crm_timer_init(&ctx_data->req_watch_dog,
-		ctx_data->req_timer_timeout, ctx_data, &cam_ope_req_timer_cb);
+		OPE_REQUEST_TIMEOUT, ctx_data, &cam_ope_req_timer_cb);
 	if (rc)
 		CAM_ERR(CAM_OPE, "Failed to start timer");
 
@@ -2217,6 +2187,7 @@ static int cam_ope_mgr_process_cmd_buf_req(struct cam_ope_hw_mgr *hw_mgr,
 					ope_request->ope_kmd_buf.cpu_addr,
 					ope_request->ope_kmd_buf.iova_addr,
 					ope_request->ope_kmd_buf.iova_cdm_addr);
+					break;
 				} else if (cmd_buf->cmd_buf_usage ==
 					OPE_CMD_BUF_DEBUG) {
 					ope_request->ope_debug_buf.cpu_addr =
@@ -2231,8 +2202,8 @@ static int cam_ope_mgr_process_cmd_buf_req(struct cam_ope_hw_mgr *hw_mgr,
 						cmd_buf->offset;
 					CAM_DBG(CAM_OPE, "dbg buf = %x",
 					ope_request->ope_debug_buf.cpu_addr);
+					break;
 				}
-				cam_mem_put_cpu_buf(cmd_buf->mem_handle);
 				break;
 			}
 			case OPE_CMD_BUF_SCOPE_STRIPE: {
@@ -2291,10 +2262,6 @@ static int cam_ope_mgr_process_cmd_desc(struct cam_ope_hw_mgr *hw_mgr,
 
 	*ope_cmd_buf_addr = 0;
 	for (i = 0; i < packet->num_cmd_buf; i++, num_cmd_buf++) {
-		rc = cam_packet_util_validate_cmd_desc(&cmd_desc[i]);
-		if (rc)
-			return rc;
-
 		if (cmd_desc[i].type != CAM_CMD_BUF_GENERIC ||
 			cmd_desc[i].meta_data == OPE_CMD_META_GENERIC_BLOB)
 			continue;
@@ -2412,15 +2379,13 @@ static int cam_ope_mgr_pkt_validation(struct cam_packet *packet)
 		return -EINVAL;
 	}
 
-	if (!packet->num_io_configs ||
-		packet->num_io_configs > OPE_MAX_IO_BUFS) {
+	if (packet->num_io_configs > OPE_MAX_IO_BUFS) {
 		CAM_ERR(CAM_OPE, "Invalid number of io configs: %d %d",
 			OPE_MAX_IO_BUFS, packet->num_io_configs);
 		return -EINVAL;
 	}
 
-	if (!packet->num_cmd_buf ||
-		packet->num_cmd_buf > OPE_PACKET_MAX_CMD_BUFS) {
+	if (packet->num_cmd_buf > OPE_PACKET_MAX_CMD_BUFS) {
 		CAM_ERR(CAM_OPE, "Invalid number of cmd buffers: %d %d",
 			OPE_PACKET_MAX_CMD_BUFS, packet->num_cmd_buf);
 		return -EINVAL;
@@ -2662,15 +2627,11 @@ static int cam_ope_mgr_acquire_hw(void *hw_priv, void *hw_acquire_args)
 		goto end;
 	}
 	strlcpy(cdm_acquire->identifier, "ope", sizeof("ope"));
-	if (ctx->ope_acquire.dev_type == OPE_DEV_TYPE_OPE_RT) {
+	if (ctx->ope_acquire.dev_type == OPE_DEV_TYPE_OPE_RT)
 		cdm_acquire->priority = CAM_CDM_BL_FIFO_3;
-		ctx->req_timer_timeout = OPE_REQUEST_RT_TIMEOUT;
-	}
 	else if (ctx->ope_acquire.dev_type ==
-		OPE_DEV_TYPE_OPE_NRT) {
+		OPE_DEV_TYPE_OPE_NRT)
 		cdm_acquire->priority = CAM_CDM_BL_FIFO_0;
-		ctx->req_timer_timeout = OPE_REQUEST_NRT_TIMEOUT;
-	}
 	else
 		goto free_cdm_acquire;
 
@@ -3083,7 +3044,6 @@ static int cam_ope_mgr_release_hw(void *hw_priv, void *hw_release_args)
 	return rc;
 }
 
-
 static int cam_ope_packet_generic_blob_handler(void *user_data,
 	uint32_t blob_type, uint32_t blob_size, uint8_t *blob_data)
 {
@@ -3186,20 +3146,16 @@ static int cam_ope_process_generic_cmd_buffer(
 		((uint32_t *) &packet->payload + packet->cmd_buf_offset/4);
 
 	for (i = 0; i < packet->num_cmd_buf; i++) {
-		rc = cam_packet_util_validate_cmd_desc(&cmd_desc[i]);
-		if (rc)
-			return rc;
-
 		if (!cmd_desc[i].length)
 			continue;
 
-		if (cmd_desc[i].meta_data != OPE_CMD_META_GENERIC_BLOB)
-			continue;
+	if (cmd_desc[i].meta_data != OPE_CMD_META_GENERIC_BLOB)
+		continue;
 
-		rc = cam_packet_util_process_generic_cmd_buffer(&cmd_desc[i],
-			cam_ope_packet_generic_blob_handler, &cmd_generic_blob);
-		if (rc)
-			CAM_ERR(CAM_OPE, "Failed in processing blobs %d", rc);
+	rc = cam_packet_util_process_generic_cmd_buffer(&cmd_desc[i],
+		cam_ope_packet_generic_blob_handler, &cmd_generic_blob);
+	if (rc)
+		CAM_ERR(CAM_OPE, "Failed in processing blobs %d", rc);
 	}
 
 	return rc;
@@ -3337,7 +3293,7 @@ static int cam_ope_mgr_prepare_hw_update(void *hw_priv,
 	prepare_args->priv = ctx_data->req_list[request_idx];
 	prepare_args->pf_data->packet = packet;
 	prepare_args->pf_data->req    = ope_req;
-	CAM_INFO(CAM_REQ, "OPE req %x num_batch %d", ope_req, ope_req->num_batch);
+	CAM_DBG(CAM_REQ, "OPE req %x num_batch %d", ope_req, ope_req->num_batch);
 	ope_req->hang_data.packet = packet;
 	ktime_get_boottime_ts64(&ts);
 	ctx_data->last_req_time = (uint64_t)((ts.tv_sec * 1000000000) +
@@ -3345,17 +3301,16 @@ static int cam_ope_mgr_prepare_hw_update(void *hw_priv,
 	CAM_DBG(CAM_REQ, "req_id= %llu ctx_id= %d lrt=%llu",
 		packet->header.request_id, ctx_data->ctx_id,
 		ctx_data->last_req_time);
-	cam_ope_req_timer_modify(ctx_data, ctx_data->req_timer_timeout);
+	cam_ope_req_timer_modify(ctx_data, OPE_REQUEST_TIMEOUT);
 	set_bit(request_idx, ctx_data->bitmap);
-	cam_ope_mgr_put_cmd_buf(packet);
 	mutex_unlock(&ctx_data->ctx_mutex);
+
 	CAM_DBG(CAM_REQ, "Prepare Hw update Successful request_id: %d  ctx: %d",
 		packet->header.request_id, ctx_data->ctx_id);
 	return rc;
 
 end:
 	kzfree(ctx_data->req_list[request_idx]->cdm_cmd);
-	cam_ope_mgr_put_cmd_buf(packet);
 	ctx_data->req_list[request_idx]->cdm_cmd = NULL;
 req_cdm_mem_alloc_failed:
 	kzfree(ctx_data->req_list[request_idx]);
@@ -3666,7 +3621,7 @@ static int cam_ope_mgr_hw_dump(void *hw_priv, void *hw_dump_args)
 	cur_ts = ktime_to_timespec64(cur_time);
 	req_ts = ktime_to_timespec64(ctx_data->req_list[idx]->submit_timestamp);
 
-	if (diff < (ctx_data->req_timer_timeout * 1000)) {
+	if (diff < (OPE_REQUEST_TIMEOUT * 1000)) {
 		CAM_INFO(CAM_OPE, "No Error req %llu %ld:%06ld %ld:%06ld",
 			dump_args->request_id,
 			req_ts.tv_sec,
@@ -4157,7 +4112,6 @@ static void cam_ope_mgr_dump_pf_data(
 	ctx_data    = (struct cam_ope_ctx *)hw_cmd_args->ctxt_to_hw_map;
 	packet      = hw_cmd_args->u.pf_args.pf_data.packet;
 	ope_request = hw_cmd_args->u.pf_args.pf_data.req;
-
 	ope_pid_mid_args.fault_mid = hw_cmd_args->u.pf_args.mid;
 	ope_pid_mid_args.fault_pid = hw_cmd_args->u.pf_args.pid;
 	ctx_found = hw_cmd_args->u.pf_args.ctx_found;
@@ -4205,16 +4159,16 @@ static void cam_ope_mgr_dump_pf_data(
 	if (rc) {
 		CAM_ERR(CAM_OPE,
 			"CAM_OPE_CMD_MATCH_PID_MID failed %d", rc);
-		return;
+			return;
 	}
 
 	*resource_type = ope_pid_mid_args.match_res;
 	CAM_INFO(CAM_OPE, "Fault port %d", *resource_type);
 
 stripedump:
+
 	io_cfg = (struct cam_buf_io_cfg *)((uint32_t *)&packet->payload +
 			packet->io_configs_offset / 4);
-
 	if (!ope_request)
 		goto iodump;
 
